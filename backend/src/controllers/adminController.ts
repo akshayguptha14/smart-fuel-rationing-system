@@ -940,3 +940,171 @@ export const getInventoryLedger = async (req: Request, res: Response): Promise<v
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const getForecasting = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const windowDays = 7;
+    const windowMs = windowDays * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - windowMs);
+
+    const stationsData = await prisma.station.findMany({
+      include: { inventory: true }
+    });
+
+    const ledgerEvents = await prisma.inventoryLedger.findMany({
+      where: {
+        createdAt: { gte: windowStart }
+      }
+    });
+
+    const summary = {
+      forecastableStations: 0,
+      insufficientDataStations: 0,
+      criticalStations: 0,
+      lowStations: 0,
+      normalStations: 0
+    };
+
+    const stationsResult = [];
+
+    for (const station of stationsData) {
+      for (const inv of station.inventory) {
+        const capacity = inv.capacity.toNumber();
+        const currentInventory = inv.quantity.toNumber();
+        const inventoryPercentage = capacity > 0 ? (currentInventory / capacity) * 100 : 0;
+
+        let currentRisk = "NORMAL";
+        if (inventoryPercentage < 20) {
+          currentRisk = "CRITICAL";
+        } else if (inventoryPercentage <= 50) {
+          currentRisk = "LOW";
+        }
+
+        const relevantEvents = ledgerEvents.filter(e => e.stationId === station.id && e.fuelType === inv.fuelType);
+        
+        const activeDaysSet = new Set(relevantEvents.map(e => e.createdAt.toISOString().split('T')[0]));
+        const activeDays = activeDaysSet.size;
+
+        const reservedEvents = relevantEvents.filter(e => e.eventType === 'RESERVED');
+        const dispensedEvents = relevantEvents.filter(e => e.eventType === 'DISPENSED');
+        const refundedEvents = relevantEvents.filter(e => e.eventType === 'REFUNDED');
+
+        const consumptionEvents = reservedEvents.length + dispensedEvents.length + refundedEvents.length;
+        
+        const reservedMovement = reservedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const dispensedMovement = dispensedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const refundedMovement = refundedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+
+        const suppliedEvents = relevantEvents.filter(e => e.eventType === 'SUPPLIED');
+        const manualEvents = relevantEvents.filter(e => e.eventType === 'MANUAL_ADJUSTMENT');
+        const suppliedLiters = suppliedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const manualAdjustmentLiters = manualEvents.reduce((acc, val) => acc + val.quantityChange.toNumber(), 0);
+
+        const netConsumedLiters = reservedMovement + dispensedMovement - refundedMovement;
+        
+        let status = "INSUFFICIENT_DATA";
+        let message = "Insufficient historical data";
+        let netBurnRateLitersPerDay = null;
+        let hoursUntilShortage = null;
+        
+        let projected24h = null, projected48h = null, projected72h = null;
+        let forecastedRisk24h = null, forecastedRisk48h = null, forecastedRisk72h = null;
+        let recommendation = "INSUFFICIENT DATA — CONTINUE COLLECTING INVENTORY HISTORY";
+
+        if (activeDays >= 3 && consumptionEvents >= 5) {
+          if (netConsumedLiters <= 0) {
+            status = "NO_CONSUMPTION";
+            message = "No recent consumption detected";
+            recommendation = "NO RECENT CONSUMPTION — FORECAST UNAVAILABLE";
+          } else {
+            status = "READY";
+            message = "Forecast available";
+            netBurnRateLitersPerDay = netConsumedLiters / windowDays;
+            
+            if (currentInventory <= 0) {
+              hoursUntilShortage = 0;
+            } else {
+              hoursUntilShortage = (currentInventory / netBurnRateLitersPerDay) * 24;
+            }
+
+            const getProjectedRisk = (proj: number) => {
+              const pct = capacity > 0 ? (proj / capacity) * 100 : 0;
+              if (pct < 20) return "CRITICAL";
+              if (pct <= 50) return "LOW";
+              return "NORMAL";
+            };
+
+            projected24h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 1));
+            projected48h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 2));
+            projected72h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 3));
+            
+            forecastedRisk24h = getProjectedRisk(projected24h);
+            forecastedRisk48h = getProjectedRisk(projected48h);
+            forecastedRisk72h = getProjectedRisk(projected72h);
+
+            if (currentRisk === "CRITICAL") recommendation = "URGENT SUPPLY REQUIRED";
+            else if (currentRisk === "LOW") recommendation = "PLAN REPLENISHMENT";
+            else recommendation = "NO IMMEDIATE ACTION";
+          }
+        }
+
+        if (status === "READY") summary.forecastableStations++;
+        else summary.insufficientDataStations++;
+
+        if (currentRisk === "CRITICAL") summary.criticalStations++;
+        else if (currentRisk === "LOW") summary.lowStations++;
+        else summary.normalStations++;
+
+        stationsResult.push({
+          stationId: station.id,
+          stationName: station.name,
+          location: station.location,
+          fuelType: inv.fuelType,
+          currentInventory,
+          capacity,
+          inventoryPercentage,
+          currentRisk,
+          eventCount: relevantEvents.length,
+          activeDays,
+          status,
+          message,
+          netConsumedLiters,
+          netBurnRateLitersPerDay,
+          hoursUntilShortage,
+          projected24h,
+          projected48h,
+          projected72h,
+          forecastedRisk24h,
+          forecastedRisk48h,
+          forecastedRisk72h,
+          suppliedLiters,
+          refundedLiters: refundedMovement,
+          manualAdjustmentLiters,
+          recommendation
+        });
+      }
+    }
+
+    res.json({
+      generatedAt: now.toISOString(),
+      analysisWindow: {
+        start: windowStart.toISOString(),
+        end: now.toISOString(),
+        days: windowDays
+      },
+      summary,
+      stations: stationsResult
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

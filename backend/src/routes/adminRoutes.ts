@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllReservations, getAllUsers, getAllTransactions, getSystemHealth, listVerifications, getVerificationDocument, approveVerification, rejectVerification, listPriorities, getPriorityDocument, approvePriority, rejectPriority, getAllocationRequests, approveAllocationRequest, rejectAllocationRequest, getCommandCentreData, getInventoryLedger } from '../controllers/adminController';
+import { getAllReservations, getAllUsers, getAllTransactions, getSystemHealth, listVerifications, getVerificationDocument, approveVerification, rejectVerification, listPriorities, getPriorityDocument, approvePriority, rejectPriority, getAllocationRequests, approveAllocationRequest, rejectAllocationRequest, getCommandCentreData, getInventoryLedger, getForecasting } from '../controllers/adminController';
 import { authenticate } from '../middlewares/authMiddleware';
 
 export const adminRoutes = Router();
@@ -11,6 +11,7 @@ adminRoutes.get('/transactions', getAllTransactions);
 adminRoutes.get('/system/health', getSystemHealth);
 adminRoutes.get('/command-centre', getCommandCentreData);
 adminRoutes.get('/inventory-ledger', getInventoryLedger);
+adminRoutes.get('/forecasting', getForecasting);
 adminRoutes.get('/verifications', listVerifications);
 adminRoutes.get('/verifications/:id/document/:type', getVerificationDocument);
 adminRoutes.post('/verifications/:id/approve', approveVerification);

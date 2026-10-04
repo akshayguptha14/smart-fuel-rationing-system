@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
   Landmark, Settings, FileText, Search, Bell, MapPin, Map as MapIcon,
   LogOut, Activity, BarChart3, Users, Clock, ArrowRight, ShieldCheck,
-  AlertCircle, RefreshCw, Zap, Droplet, Database, History
+  AlertCircle, RefreshCw, Zap, Droplet, Database, History, TrendingUp
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -20,6 +20,7 @@ import PriorityRequestsModule from './PriorityRequestsModule';
 import SupplyAllocationModule from './SupplyAllocationModule';
 import CommandCentreModule from './CommandCentreModule';
 import InventoryLedgerModule from './InventoryLedgerModule';
+import ForecastingModule from './ForecastingModule';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -115,6 +116,7 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
           <NavItem icon={<MapIcon />} label="Reports &amp; Analytics" active={activeTab === 'Reports & Analytics'} onClick={() => setActiveTab('Reports & Analytics')} />
           <NavItem icon={<Activity />} label="Command Centre" active={activeTab === 'Command Centre'} onClick={() => setActiveTab('Command Centre')} />
           <NavItem icon={<History />} label="Inventory Ledger" active={activeTab === 'Inventory Ledger'} onClick={() => setActiveTab('Inventory Ledger')} />
+          <NavItem icon={<TrendingUp />} label="Forecasting / Supply Intelligence" active={activeTab === 'Forecasting / Supply Intelligence'} onClick={() => setActiveTab('Forecasting / Supply Intelligence')} />
           <NavItem icon={<Settings />} label="System Settings" active={activeTab === 'System Settings'} onClick={() => setActiveTab('System Settings')} />
         </div>
         
@@ -477,6 +479,8 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
         <CommandCentreModule />
       ) : activeTab === 'Inventory Ledger' ? (
         <InventoryLedgerModule token={token} />
+      ) : activeTab === 'Forecasting / Supply Intelligence' ? (
+        <ForecastingModule token={token} />
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <h2 className="text-2xl font-bold text-white mb-2">{activeTab}</h2>
