@@ -72,6 +72,14 @@ enum SupplyEventType {
   ALLOCATION
 }
 
+enum InventoryEventType {
+  RESERVED
+  REFUNDED
+  SUPPLIED
+  DISPENSED
+  MANUAL_ADJUSTMENT
+}
+
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
@@ -138,6 +146,7 @@ model Station {
   transactions Transaction[]
   reservations Reservation[]
   allocationRequests FuelAllocationRequest[]
+  inventoryLedgers InventoryLedger[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
@@ -276,4 +285,19 @@ model GlobalSupplyLog {
   createdAt    DateTime        @default(now())
 
   @@index([stationId])
+}
+
+model InventoryLedger {
+  id              String              @id @default(uuid())
+  stationId       String
+  station         Station             @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  fuelType        FuelType
+  eventType       InventoryEventType
+  quantityChange  Decimal             @db.Decimal(10, 2)
+  quantityAfter   Decimal             @db.Decimal(10, 2)
+  referenceId     String?
+  createdAt       DateTime            @default(now())
+
+  @@index([stationId, fuelType, createdAt])
+  @@index([referenceId])
 }

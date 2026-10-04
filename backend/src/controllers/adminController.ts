@@ -629,6 +629,20 @@ export const approveAllocationRequest = async (req: Request, res: Response): Pro
         data: { quantity: { increment: request.requestedQuantity } }
       });
 
+      const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+      if (currentInv) {
+        await tx.inventoryLedger.create({
+          data: {
+            stationId: request.stationId,
+            fuelType: request.fuelType,
+            eventType: 'SUPPLIED',
+            quantityChange: request.requestedQuantity,
+            quantityAfter: currentInv.quantity,
+            referenceId: request.id
+          }
+        });
+      }
+
       const updateCount = await tx.fuelAllocationRequest.updateMany({
         where: { id, status: 'PENDING' },
         data: {

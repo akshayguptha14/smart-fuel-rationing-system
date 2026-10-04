@@ -137,6 +137,20 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         }
       });
 
+      const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+      if (currentInv) {
+        await tx.inventoryLedger.create({
+          data: {
+            stationId,
+            fuelType: fuelType as FuelType,
+            eventType: 'RESERVED',
+            quantityChange: new Prisma.Decimal(-amount),
+            quantityAfter: currentInv.quantity,
+            referenceId: reservation.id
+          }
+        });
+      }
+
       return reservation;
     });
 
@@ -205,6 +219,19 @@ export const cancelReservation = async (req: Request, res: Response): Promise<vo
           where: { id: inventory.id },
           data: { quantity: { increment: reservation.amount } }
         });
+        const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+        if (currentInv) {
+          await tx.inventoryLedger.create({
+            data: {
+              stationId: reservation.stationId,
+              fuelType: reservation.fuelType,
+              eventType: 'REFUNDED',
+              quantityChange: reservation.amount,
+              quantityAfter: currentInv.quantity,
+              referenceId: id
+            }
+          });
+        }
       }
 
       const updateStatus = await tx.reservation.updateMany({
@@ -298,6 +325,19 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
             where: { id: inventory.id },
             data: { quantity: { increment: diff } }
           });
+          const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+          if (currentInv) {
+            await tx.inventoryLedger.create({
+              data: {
+                stationId: reservation.stationId,
+                fuelType: reservation.fuelType,
+                eventType: 'REFUNDED',
+                quantityChange: new Prisma.Decimal(diff),
+                quantityAfter: currentInv.quantity,
+                referenceId: reservation.id
+              }
+            });
+          }
         }
       }
 

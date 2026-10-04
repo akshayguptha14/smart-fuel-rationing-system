@@ -168,21 +168,50 @@ export const updateInventory = async (req: Request, res: Response): Promise<void
         where: { stationId_fuelType: { stationId: id, fuelType: fuelType as FuelType } }
       });
 
+      let resultInv;
       if (inventory) {
-        return await tx.fuelInventory.update({
+        // Acquire row lock to guarantee oldQty is concurrency-safe before absolute overwrite
+        const lockedInv = await tx.fuelInventory.update({
+          where: { id: inventory.id },
+          data: { updatedAt: new Date() }
+        });
+        const oldQty = lockedInv.quantity.toNumber();
+
+        resultInv = await tx.fuelInventory.update({
           where: { id: inventory.id },
           data: { quantity: new Prisma.Decimal(quantity), capacity: new Prisma.Decimal(capacity) }
         });
-      } else {
-        return await tx.fuelInventory.create({
+        await tx.inventoryLedger.create({
           data: {
             stationId: id,
-            fuelType: fuelType as FuelType,
+            fuelType: fuelType as any,
+            eventType: 'MANUAL_ADJUSTMENT',
+            quantityChange: new Prisma.Decimal(quantity - oldQty),
+            quantityAfter: new Prisma.Decimal(quantity),
+            referenceId: null
+          }
+        });
+      } else {
+        resultInv = await tx.fuelInventory.create({
+          data: {
+            stationId: id,
+            fuelType: fuelType as any,
             quantity: new Prisma.Decimal(quantity),
             capacity: new Prisma.Decimal(capacity)
           }
         });
+        await tx.inventoryLedger.create({
+          data: {
+            stationId: id,
+            fuelType: fuelType as any,
+            eventType: 'MANUAL_ADJUSTMENT',
+            quantityChange: new Prisma.Decimal(quantity),
+            quantityAfter: new Prisma.Decimal(quantity),
+            referenceId: null
+          }
+        });
       }
+      return resultInv;
     });
 
     res.json(result);

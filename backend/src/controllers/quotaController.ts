@@ -98,6 +98,22 @@ export const consumeQuota = async (req: Request, res: Response): Promise<void> =
         }
       });
 
+      if (inventory) {
+        const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+        if (currentInv) {
+          await tx.inventoryLedger.create({
+            data: {
+              stationId,
+              fuelType: fuelType as any,
+              eventType: 'DISPENSED',
+              quantityChange: new Prisma.Decimal(-amount),
+              quantityAfter: currentInv.quantity,
+              referenceId: transaction.id
+            }
+          });
+        }
+      }
+
       return { transaction, remainingQuota: quota.remainingQuota.toNumber() - amount };
     });
 
