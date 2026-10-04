@@ -726,3 +726,122 @@ export const rejectAllocationRequest = async (req: Request, res: Response): Prom
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const getCommandCentreData = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const [
+      totalStations,
+      activeStations,
+      totalUsers,
+      totalVehicles,
+      activeQuotas,
+      reservations,
+      transactions,
+      inventory
+    ] = await Promise.all([
+      prisma.station.count(),
+      prisma.station.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { role: 'USER' } }),
+      prisma.vehicleVerification.count({ where: { status: 'APPROVED' } }),
+      prisma.fuelQuota.count({ where: { isActive: true } }),
+      prisma.reservation.findMany({ select: { status: true, amount: true } }),
+      prisma.transaction.findMany({ select: { status: true, amount: true } }),
+      prisma.fuelInventory.findMany({
+        include: { station: { select: { name: true, location: true, address: true, isActive: true } } }
+      })
+    ]);
+
+    let totalDispensed = 0;
+    const transactionStats = { SUCCESS: 0, FAILED: 0, REFUNDED: 0, totalAmount: 0 } as any;
+    transactions.forEach(t => {
+      transactionStats[t.status]++;
+      if (t.status === 'SUCCESS') {
+        const amt = t.amount.toNumber();
+        totalDispensed += amt;
+        transactionStats.totalAmount += amt;
+      }
+    });
+
+    const reservationStats = { PENDING: 0, COMPLETED: 0, CANCELLED: 0, EXPIRED: 0, totalAmount: 0 } as any;
+    reservations.forEach(r => {
+      reservationStats[r.status]++;
+      reservationStats.totalAmount += r.amount.toNumber();
+    });
+
+    let totalInventoryQuantity = 0;
+    let totalInventoryCapacity = 0;
+    
+    // Group inventory by fuel type and station
+    const fuelSummary: Record<string, { quantity: number, capacity: number }> = {};
+    const stationSupplies = inventory.map(inv => {
+      const q = inv.quantity.toNumber();
+      const c = inv.capacity.toNumber();
+      totalInventoryQuantity += q;
+      totalInventoryCapacity += c;
+
+      if (!fuelSummary[inv.fuelType]) {
+        fuelSummary[inv.fuelType] = { quantity: 0, capacity: 0 };
+      }
+      fuelSummary[inv.fuelType].quantity += q;
+      fuelSummary[inv.fuelType].capacity += c;
+
+      const percentageRemaining = c > 0 ? (q / c) * 100 : 0;
+      let riskLevel = 'NORMAL';
+      if (percentageRemaining < 20) riskLevel = 'CRITICAL';
+      else if (percentageRemaining <= 50) riskLevel = 'LOW';
+
+      return {
+        id: inv.id,
+        stationName: inv.station.name,
+        location: inv.station.location,
+        address: inv.station.address,
+        isActive: inv.station.isActive,
+        fuelType: inv.fuelType,
+        quantity: q,
+        capacity: c,
+        percentageRemaining,
+        percentageUsed: 100 - percentageRemaining,
+        riskLevel
+      };
+    });
+
+    // Sort risk board
+    const riskOrder = { 'CRITICAL': 0, 'LOW': 1, 'NORMAL': 2 };
+    stationSupplies.sort((a, b) => {
+      if (riskOrder[a.riskLevel as keyof typeof riskOrder] !== riskOrder[b.riskLevel as keyof typeof riskOrder]) {
+        return riskOrder[a.riskLevel as keyof typeof riskOrder] - riskOrder[b.riskLevel as keyof typeof riskOrder];
+      }
+      return a.percentageRemaining - b.percentageRemaining;
+    });
+
+    const overallStorageUtilization = totalInventoryCapacity > 0 ? (totalInventoryQuantity / totalInventoryCapacity) * 100 : 0;
+
+    res.json({
+      metrics: {
+        totalStations,
+        activeStations,
+        totalUsers,
+        totalVerifiedVehicles: totalVehicles,
+        activeFuelQuotas: activeQuotas,
+        currentReservations: reservations.length,
+        successfulTransactions: transactionStats.SUCCESS,
+        totalFuelDispensed: totalDispensed,
+        totalCurrentInventory: totalInventoryQuantity,
+        overallStorageUtilization
+      },
+      fuelSummary,
+      stationSupplies,
+      reservationStats,
+      transactionStats
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

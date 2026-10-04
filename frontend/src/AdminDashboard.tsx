@@ -18,6 +18,7 @@ import SystemSettingsModule from './SystemSettingsModule';
 import VerificationsModule from './VerificationsModule';
 import PriorityRequestsModule from './PriorityRequestsModule';
 import SupplyAllocationModule from './SupplyAllocationModule';
+import CommandCentreModule from './CommandCentreModule';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -111,6 +112,7 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
           <NavItem icon={<Clock />} label="Reservations" active={activeTab === 'Reservations'} onClick={() => setActiveTab('Reservations')} />
           <NavItem icon={<FileText />} label="Transactions" active={activeTab === 'Transactions'} onClick={() => setActiveTab('Transactions')} />
           <NavItem icon={<MapIcon />} label="Reports &amp; Analytics" active={activeTab === 'Reports & Analytics'} onClick={() => setActiveTab('Reports & Analytics')} />
+          <NavItem icon={<Activity />} label="Command Centre" active={activeTab === 'Command Centre'} onClick={() => setActiveTab('Command Centre')} />
           <NavItem icon={<Settings />} label="System Settings" active={activeTab === 'System Settings'} onClick={() => setActiveTab('System Settings')} />
         </div>
         
@@ -469,6 +471,8 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
         <PriorityRequestsModule token={token} />
       ) : activeTab === 'Supply Allocation' ? (
         <SupplyAllocationModule token={token} />
+      ) : activeTab === 'Command Centre' ? (
+        <CommandCentreModule />
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <h2 className="text-2xl font-bold text-white mb-2">{activeTab}</h2>
