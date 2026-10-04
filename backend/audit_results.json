@@ -1,0 +1,768 @@
+{
+  "stats": {
+    "users": 27,
+    "vehicles": 18,
+    "quotas": 17,
+    "reservations": 1,
+    "transactions": 1
+  },
+  "mustKeep": [
+    {
+      "id": "fd0030fb-83ef-41f7-a328-7777d3e81360",
+      "name": "E2E User",
+      "email": "e2e_user_1791022221819@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T10:10:26.355Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 1,
+      "transactionsCount": 1,
+      "ownsStation": false
+    },
+    {
+      "id": "a55572bd-f3e5-40d8-9256-bab25a6f5b4e",
+      "name": "Akshay Guptha",
+      "email": "akshay@gmail.com",
+      "role": "ADMIN",
+      "createdAt": "2026-10-03T11:05:20.204Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "495f80dd-39c4-471e-9aad-e4736850157e",
+      "name": "john",
+      "email": "john@gmail.com",
+      "role": "STATION_OWNER",
+      "createdAt": "2026-10-03T16:37:48.992Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": true
+    }
+  ],
+  "safeTest": [
+    {
+      "id": "467f73f8-0391-48a9-bba8-96d76c6fb3ed",
+      "name": "Test User",
+      "email": "test-1790852876234@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:07:58.583Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "890aab20-80b9-47d3-a93c-69ef63feb113",
+      "name": "Station Owner",
+      "email": "station-1790853373924@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:16:14.380Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "204403d4-3baf-48f2-be85-4062b6efe7bf",
+      "name": "Regular User",
+      "email": "user-1790853373924@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:16:15.049Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "5491e60b-b0fd-426c-9963-b99aa7d4ebe9",
+      "name": "Test User",
+      "email": "user-1790854109048@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:28:30.525Z",
+      "vehiclesCount": 2,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "edffebef-88b4-4051-ac4a-3a3a6e33d908",
+      "name": "Regular User",
+      "email": "user-1790854477714@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:34:39.476Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "c12d06f1-0696-4e40-986e-f3f04d28e032",
+      "name": null,
+      "email": "owner2-1790854801127@example.com",
+      "role": "STATION_OWNER",
+      "createdAt": "2026-10-01T11:40:02.298Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "98ead253-da93-4563-a094-f6f2af2dafcf",
+      "name": "User",
+      "email": "user2-1790854823496@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:40:25.257Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "014a838f-bfc5-4f3f-911b-ccd79b202071",
+      "name": "User",
+      "email": "user2-1790854849185@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:40:51.062Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "f8bbf1b7-00f2-4ae4-b7dc-1efbf7c35fe1",
+      "name": "User",
+      "email": "conc-user-1790855236713@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:47:17.993Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "e3be3576-e939-4d2e-b80b-87949140350c",
+      "name": "User",
+      "email": "conc-user-1790855293787@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:48:15.602Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "7bb73db3-8f3f-4c6e-b08d-a04dc71084dd",
+      "name": "User",
+      "email": "conc-user-1790855345875@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:49:08.026Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "5b9a1d73-bd59-45e0-a1d4-2497dc798d24",
+      "name": "User",
+      "email": "user2-1790855355138@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:49:16.189Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "0bf00009-9525-4e4e-ba27-684980d098d5",
+      "name": "User",
+      "email": "conc-user-1790855494946@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:51:37.319Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "34e7aaec-2115-4bdb-8af6-11ec15e005b4",
+      "name": "User",
+      "email": "user2-1790855504747@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T11:51:45.818Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "bf6f8b85-106d-4037-a281-08381a03acfd",
+      "name": "User",
+      "email": "conc-user-1790856102408@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T12:01:44.477Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "084042c8-15ad-4d7f-8e6d-c435e8289226",
+      "name": "User",
+      "email": "user2-1790856110306@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T12:01:52.231Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "97a6bfdc-a440-4ee2-869e-c729a892c58a",
+      "name": "User",
+      "email": "conc-user-1790856416844@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T12:06:58.714Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "a7743414-9c34-48f8-8cf5-f88f0c05ee1f",
+      "name": "User",
+      "email": "user2-1790856426481@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-01T12:07:07.554Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "d44aff16-4462-4c32-9453-a9f043d539b9",
+      "name": "E2E User",
+      "email": "e2e_user_1791020041201@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T09:34:04.450Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "efd8dfec-f354-4a98-af65-94fa58e05732",
+      "name": "E2E User",
+      "email": "e2e_user_1791020094214@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T09:34:57.207Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "edd63978-95e8-42a6-9cae-6f8f068ad838",
+      "name": "E2E User",
+      "email": "e2e_user_1791020145081@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T09:35:48.059Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "0030cdf5-3847-4add-bd9a-f7c3b73ec23f",
+      "name": "E2E User",
+      "email": "e2e_user_1791020176476@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T09:36:19.267Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    },
+    {
+      "id": "5f496f1b-d11b-4c12-ae83-36667c6dc957",
+      "name": "E2E User",
+      "email": "e2e_user_1791020239780@example.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T09:37:22.507Z",
+      "vehiclesCount": 1,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    }
+  ],
+  "uncertain": [
+    {
+      "id": "9e8254cb-380b-45ae-bf52-77713dfa2fba",
+      "name": "Abhishek",
+      "email": "abhi@gmail.com",
+      "role": "USER",
+      "createdAt": "2026-10-03T11:54:59.480Z",
+      "vehiclesCount": 0,
+      "reservationsCount": 0,
+      "transactionsCount": 0,
+      "ownsStation": false
+    }
+  ],
+  "mustKeepDetails": [
+    {
+      "email": "e2e_user_1791022221819@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1791022221819",
+          "quotas": 1,
+          "reservations": 1
+        }
+      ],
+      "transactions": 1
+    },
+    {
+      "email": "akshay@gmail.com",
+      "vehicles": [],
+      "transactions": 0
+    },
+    {
+      "email": "john@gmail.com",
+      "vehicles": [],
+      "transactions": 0
+    }
+  ],
+  "safeTestDetails": [
+    {
+      "email": "test-1790852876234@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-8903",
+          "type": "CAR",
+          "quotas": 0
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "station-1790853373924@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user-1790853373924@example.com",
+      "vehicles": [
+        {
+          "plate": "QTEST-3107",
+          "type": "CAR",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "b1a9ee66-81b5-47e5-8e9d-c3c2b10d90d4",
+            "vehicleId": "ea72ae9b-73c2-4b7d-b5f9-2891b3544cff",
+            "period": "WEEKLY",
+            "totalQuota": "20",
+            "remainingQuota": "20",
+            "startDate": "2026-10-01T11:16:15.831Z",
+            "endDate": "2026-10-08T11:16:15.831Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:16:15.495Z",
+            "updatedAt": "2026-10-01T11:16:15.495Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user-1790854109048@example.com",
+      "vehicles": [
+        {
+          "plate": "CAR-1790854109048",
+          "type": "CAR",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "8901125c-c5df-40b4-a3c4-8b90eadd71ee",
+            "vehicleId": "0b8e9ad6-82ce-4921-b425-098683ac2e47",
+            "period": "MONTHLY",
+            "totalQuota": "40",
+            "remainingQuota": "40",
+            "startDate": "2026-10-01T11:28:31.238Z",
+            "endDate": "2026-11-01T11:28:31.238Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:28:30.950Z",
+            "updatedAt": "2026-10-01T11:28:30.950Z"
+          }
+        },
+        {
+          "plate": "TRK-1790854109048",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "84daf76f-b8a2-4b96-8c7d-ad7f1d82cb95",
+            "vehicleId": "dd030e22-6641-43f0-87db-f8e3e21cb5fe",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "100",
+            "startDate": "2026-10-01T11:28:31.778Z",
+            "endDate": "2026-11-01T11:28:31.778Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:28:31.639Z",
+            "updatedAt": "2026-10-01T11:28:31.639Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user-1790854477714@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "owner2-1790854801127@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790854823496@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790854823496",
+          "type": "CAR",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "3ae2b0c1-4b63-4032-8d7d-f0dd3c124aaa",
+            "vehicleId": "1a60f352-9015-4c85-bc2b-a72f147d0f61",
+            "period": "MONTHLY",
+            "totalQuota": "40",
+            "remainingQuota": "40",
+            "startDate": "2026-10-01T11:40:26.329Z",
+            "endDate": "2026-11-01T11:40:26.329Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:40:26.057Z",
+            "updatedAt": "2026-10-01T11:40:26.057Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790854849185@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790854849185",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "3f59d879-4835-481d-b869-a018e369de9d",
+            "vehicleId": "62943749-443b-484e-aa40-77b685c562c9",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "82",
+            "startDate": "2026-10-01T11:40:52.807Z",
+            "endDate": "2026-11-01T11:40:52.807Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:40:52.626Z",
+            "updatedAt": "2026-10-01T11:40:55.400Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790855236713@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790855236713",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "7340d078-3c78-4ad1-93ad-9af29664fa41",
+            "vehicleId": "5f9ccb77-b557-45d9-b419-689119925137",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "25",
+            "startDate": "2026-10-01T11:47:20.422Z",
+            "endDate": "2026-11-01T11:47:20.422Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:47:19.808Z",
+            "updatedAt": "2026-10-01T11:47:22.264Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790855293787@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790855293787",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "12151b9d-ba50-46e2-8246-9ab7465caec8",
+            "vehicleId": "52fa9737-1e38-46cb-a022-dd1217748720",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "55",
+            "startDate": "2026-10-01T11:48:16.611Z",
+            "endDate": "2026-11-01T11:48:16.611Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:48:16.363Z",
+            "updatedAt": "2026-10-01T11:48:18.380Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790855345875@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790855345875",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "b14f970f-1f58-4877-b44b-701eac3f66d8",
+            "vehicleId": "8bed8553-e8df-4ea9-8726-1f53947d672c",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "55",
+            "startDate": "2026-10-01T11:49:10.296Z",
+            "endDate": "2026-11-01T11:49:10.296Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:49:09.633Z",
+            "updatedAt": "2026-10-01T11:49:12.037Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790855355138@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790855355138",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "d1415f92-7ecf-481f-8765-e90d0d18b7da",
+            "vehicleId": "b622b2fe-c38a-4417-a3cd-091269f762b6",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "82",
+            "startDate": "2026-10-01T11:49:17.189Z",
+            "endDate": "2026-11-01T11:49:17.189Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:49:16.938Z",
+            "updatedAt": "2026-10-01T11:49:22.333Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790855494946@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790855494946",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "7eac67ae-c3a9-4fec-9b99-fb7a9af35965",
+            "vehicleId": "afb5b616-d89b-47d2-a15e-0c74cf2faf57",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "55",
+            "startDate": "2026-10-01T11:51:40.006Z",
+            "endDate": "2026-11-01T11:51:40.006Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:51:39.393Z",
+            "updatedAt": "2026-10-01T11:51:41.746Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790855504747@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790855504747",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "9aae870b-1193-4ce1-a99f-b35fc87893c4",
+            "vehicleId": "a4a5a733-0ee4-40f5-9d54-83d6db49a086",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "82",
+            "startDate": "2026-10-01T11:51:48.114Z",
+            "endDate": "2026-11-01T11:51:48.114Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T11:51:47.379Z",
+            "updatedAt": "2026-10-01T11:51:52.181Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790856102408@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790856102408",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "a21a7128-d9fb-438c-9f8b-8e6141a878c7",
+            "vehicleId": "99ff8e11-a2de-4513-9018-3004ca5df8c1",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "55",
+            "startDate": "2026-10-01T12:01:46.226Z",
+            "endDate": "2026-11-01T12:01:46.226Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T12:01:45.958Z",
+            "updatedAt": "2026-10-01T12:01:47.258Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790856110306@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790856110306",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "d6770360-9d55-447d-9022-a39738349f39",
+            "vehicleId": "4a6f8483-c92b-4920-bf21-f5d0db960c66",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "82",
+            "startDate": "2026-10-01T12:01:54.819Z",
+            "endDate": "2026-11-01T12:01:54.819Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T12:01:54.311Z",
+            "updatedAt": "2026-10-01T12:01:58.557Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "conc-user-1790856416844@example.com",
+      "vehicles": [
+        {
+          "plate": "CONC-1790856416844",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "7e102c09-45ee-4a28-8656-4092e01682ec",
+            "vehicleId": "179fec68-6bc9-44ee-a211-a45c4bb7634a",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "55",
+            "startDate": "2026-10-01T12:07:01.099Z",
+            "endDate": "2026-11-01T12:07:01.099Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T12:07:00.486Z",
+            "updatedAt": "2026-10-01T12:07:03.012Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "user2-1790856426481@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1790856426481",
+          "type": "TRUCK",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "0fd59588-41f9-43a9-ba8d-664d2dc5f817",
+            "vehicleId": "74f2f650-8ad6-4b83-9357-d535ee75fa94",
+            "period": "MONTHLY",
+            "totalQuota": "100",
+            "remainingQuota": "82",
+            "startDate": "2026-10-01T12:07:08.529Z",
+            "endDate": "2026-11-01T12:07:08.529Z",
+            "isActive": true,
+            "createdAt": "2026-10-01T12:07:08.273Z",
+            "updatedAt": "2026-10-01T12:07:12.273Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "e2e_user_1791020041201@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "e2e_user_1791020094214@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "e2e_user_1791020145081@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "e2e_user_1791020176476@example.com",
+      "vehicles": [],
+      "reservations": 0,
+      "transactions": 0
+    },
+    {
+      "email": "e2e_user_1791020239780@example.com",
+      "vehicles": [
+        {
+          "plate": "TEST-1791020239780",
+          "type": "CAR",
+          "quotas": 1,
+          "activeQuota": {
+            "id": "58164426-4908-4f5a-8484-32c028d73cd7",
+            "vehicleId": "4bdf609f-3085-4c00-90e0-eeedf6709c14",
+            "period": "MONTHLY",
+            "totalQuota": "40",
+            "remainingQuota": "40",
+            "startDate": "2026-10-03T09:37:26.034Z",
+            "endDate": "2026-11-03T09:37:26.034Z",
+            "isActive": true,
+            "createdAt": "2026-10-03T09:37:25.531Z",
+            "updatedAt": "2026-10-03T09:37:25.531Z"
+          }
+        }
+      ],
+      "reservations": 0,
+      "transactions": 0
+    }
+  ]
+}

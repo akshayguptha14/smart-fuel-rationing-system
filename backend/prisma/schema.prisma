@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  STATION_OWNER
+  GOVT_OFFICIAL
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  TRUCK
+  THREE_WHEELER
+  BUS
+  OTHER
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum ReservationStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum TransactionStatus {
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum QuotaPeriod {
+  WEEKLY
+  MONTHLY
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ServiceType {
+  AMBULANCE
+  FARMER
+  PUBLIC_TRANSPORT
+}
+
+enum AllocationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum SupplyEventType {
+  ALLOCATION
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String?
+  passwordHash String?
+  role         Role          @default(USER)
+  vehicles     Vehicle[]
+  stations     Station[]     // If role is STATION_OWNER
+  transactions       Transaction[]
+  reservations       Reservation[]
+  verifications      VehicleVerification[]
+  priorities         VehiclePriority[]
+  allocationRequests FuelAllocationRequest[] @relation("AllocationRequestedBy")
+  allocationReviews  FuelAllocationRequest[] @relation("AllocationReviewedBy")
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+}
+
+model Vehicle {
+  id           String      @id @default(uuid())
+  licensePlate String      @unique
+  vehicleType  VehicleType
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fuelQuotas   FuelQuota[] // History of quotas
+  reservations Reservation[]
+  verification VehicleVerification?
+  priority     VehiclePriority?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@index([userId])
+}
+
+model FuelQuota {
+  id             String      @id @default(uuid())
+  vehicleId      String
+  vehicle        Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  period         QuotaPeriod @default(WEEKLY)
+  totalQuota     Decimal     @db.Decimal(10, 2)
+  remainingQuota Decimal     @db.Decimal(10, 2)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean     @default(true) // To distinguish current from history
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([vehicleId])
+  @@index([isActive, vehicleId]) // Quick lookup for active quota
+}
+
+model Station {
+  id           String          @id @default(uuid())
+  name         String
+  location     String          // Keep for backward compatibility or general region
+  address      String?         // Full address
+  latitude     Float?
+  longitude    Float?
+  contactPhone String?
+  isActive     Boolean         @default(true)
+  ownerId      String
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  inventory    FuelInventory[]
+  transactions Transaction[]
+  reservations Reservation[]
+  allocationRequests FuelAllocationRequest[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([ownerId])
+}
+
+model FuelInventory {
+  id        String   @id @default(uuid())
+  stationId String
+  station   Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  fuelType  FuelType
+  quantity  Decimal  @db.Decimal(10, 2)
+  capacity  Decimal  @db.Decimal(10, 2)
+  updatedAt DateTime @updatedAt
+  
+  @@unique([stationId, fuelType])
+}
+
+model Reservation {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  vehicleId    String?
+  vehicle      Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  stationId    String
+  station      Station           @relation(fields: [stationId], references: [id], onDelete: Restrict)
+  fuelType     FuelType
+  amount       Decimal           @db.Decimal(10, 2)
+  qrToken      String            @unique 
+  status       ReservationStatus @default(PENDING)
+  validUntil   DateTime 
+  transaction  Transaction?      // A reservation can lead to one transaction
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([stationId, status])
+  @@index([userId])
+}
+
+model Transaction {
+  id            String            @id @default(uuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  stationId     String
+  station       Station           @relation(fields: [stationId], references: [id], onDelete: Restrict)
+  fuelType      FuelType
+  amount        Decimal           @db.Decimal(10, 2)
+  price         Decimal           @db.Decimal(12, 2)
+  status        TransactionStatus @default(SUCCESS)
+  reservationId String?           @unique
+  reservation   Reservation?      @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+
+  @@index([stationId])
+  @@index([userId])
+}
+
+model QuotaPolicy {
+  id          String      @id @default(uuid())
+  vehicleType VehicleType @unique
+  defaultQuota Decimal    @db.Decimal(10, 2)
+  period      QuotaPeriod @default(WEEKLY)
+  updatedAt   DateTime    @updatedAt
+}
+
+model VehicleVerification {
+  id               String             @id @default(uuid())
+  vehicleId        String             @unique
+  vehicle          Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId           String             
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aadhaarLast4     String             @db.VarChar(4) 
+  aadhaarDocPath   String
+  rcDocPath        String
+  status           VerificationStatus @default(PENDING)
+  rejectionReason  String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model VehiclePriority {
+  id                String             @id @default(uuid())
+  vehicleId         String             @unique
+  vehicle           Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId            String             
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceType       ServiceType
+  status            VerificationStatus @default(PENDING)
+  proofDocumentPath String
+  rejectionReason   String?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  validUntil        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model FuelAllocationRequest {
+  id                String           @id @default(uuid())
+  stationId         String
+  station           Station          @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  requestedById     String
+  requestedBy       User             @relation("AllocationRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  fuelType          FuelType
+  requestedQuantity Decimal          @db.Decimal(10, 2)
+  status            AllocationStatus @default(PENDING)
+  reason            String?
+  reviewedById      String?
+  reviewedBy        User?            @relation("AllocationReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([stationId])
+  @@index([status])
+}
+
+model GlobalSupplyLog {
+  id           String          @id @default(uuid())
+  stationId    String?
+  fuelType     FuelType
+  quantity     Decimal         @db.Decimal(10, 2)
+  eventType    SupplyEventType
+  referenceId  String?
+  performedBy  String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+
+  @@index([stationId])
+}

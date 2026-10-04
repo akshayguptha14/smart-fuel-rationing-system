@@ -1,0 +1,10 @@
+{
+  "A": {
+    "status": "PASS",
+    "details": "Users: 4, Stations: 1, Vehicles: 1, Quotas: 1, Reservations: 1, Transactions: 1"
+  },
+  "E": {
+    "status": "PASS",
+    "details": "Reservation and Transaction are linked correctly with amount 20 L PETROL SUCCESS."
+  }
+}

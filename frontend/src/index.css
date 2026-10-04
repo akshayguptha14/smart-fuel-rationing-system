@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "system-ui", "sans-serif";
+}
+
+html, body {
+  @apply bg-gray-50 text-gray-900;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.admin-map-container .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}

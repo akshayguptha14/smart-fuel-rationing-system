@@ -1,0 +1,48 @@
+{
+  "stats": {
+    "users": 4,
+    "vehicles": 1,
+    "quotas": 1,
+    "reservations": 1,
+    "transactions": 1
+  },
+  "remainingUsers": [
+    {
+      "email": "e2e_user_1791022221819@example.com",
+      "vehicles": 1,
+      "reservations": 1,
+      "transactions": 1,
+      "stations": []
+    },
+    {
+      "email": "abhi@gmail.com",
+      "vehicles": 0,
+      "reservations": 0,
+      "transactions": 0,
+      "stations": []
+    },
+    {
+      "email": "akshay@gmail.com",
+      "vehicles": 0,
+      "reservations": 0,
+      "transactions": 0,
+      "stations": []
+    },
+    {
+      "email": "john@gmail.com",
+      "vehicles": 0,
+      "reservations": 0,
+      "transactions": 0,
+      "stations": [
+        {
+          "name": "Smart Fuel Station - Bengaluru",
+          "inventory": [
+            "PETROL 1230.5/2000",
+            "DIESEL 850/1500",
+            "ELECTRIC 8/10"
+          ]
+        }
+      ]
+    }
+  ]
+}

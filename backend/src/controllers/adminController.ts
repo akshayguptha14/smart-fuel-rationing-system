@@ -1,0 +1,728 @@
+import { Request, Response } from 'express';
+import { prisma } from '../utils/prisma';
+import fs from 'fs';
+import path from 'path';
+
+export const getAllReservations = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const reservations = await prisma.reservation.findMany({
+      select: {
+        id: true,
+        userId: true,
+        vehicleId: true,
+        stationId: true,
+        fuelType: true,
+        amount: true,
+        status: true,
+        validUntil: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        },
+        vehicle: {
+          select: {
+            licensePlate: true,
+            vehicleType: true,
+            priority: {
+              select: {
+                status: true,
+                serviceType: true,
+                validUntil: true
+              }
+            }
+          }
+        },
+        station: {
+          select: {
+            name: true,
+            address: true,
+            location: true
+          }
+        },
+        transaction: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json(reservations);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        _count: {
+          select: {
+            vehicles: true,
+            reservations: true,
+            transactions: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getAllTransactions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        createdAt: true,
+        reservationId: true,
+        reservation: {
+          select: {
+            id: true,
+            fuelType: true,
+            amount: true,
+            status: true,
+            createdAt: true,
+            validUntil: true
+          }
+        },
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        },
+        station: {
+          select: {
+            name: true,
+            address: true,
+            location: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    // Also attach vehicle to transaction response by finding it via the reservation
+    const transactionsWithVehicle = await Promise.all(transactions.map(async (t) => {
+      let vehicle = null;
+      if (t.reservationId) {
+        const resVehicle = await prisma.reservation.findUnique({
+          where: { id: t.reservationId },
+          select: {
+            vehicle: {
+              select: {
+                licensePlate: true,
+                vehicleType: true
+              }
+            }
+          }
+        });
+        if (resVehicle && resVehicle.vehicle) {
+          vehicle = resVehicle.vehicle;
+        }
+      }
+      return {
+        ...t,
+        vehicle
+      };
+    }));
+
+    res.json(transactionsWithVehicle);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getSystemHealth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    // Try a simple database query to check connectivity
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.json({
+      status: 'Operational',
+      api: 'Online',
+      database: 'Connected',
+      version: '1.0.0',
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      status: 'Degraded',
+      api: 'Online',
+      database: 'Disconnected',
+      version: '1.0.0',
+      uptime: process.uptime()
+    });
+  }
+};
+
+export const listVerifications = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const verifications = await prisma.vehicleVerification.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } },
+        vehicle: { select: { licensePlate: true, vehicleType: true } }
+      }
+    });
+
+    const safeVerifications = verifications.map(v => ({
+      id: v.id,
+      status: v.status,
+      aadhaarLast4: v.aadhaarLast4,
+      rejectionReason: v.rejectionReason,
+      reviewedBy: v.reviewedBy,
+      reviewedAt: v.reviewedAt,
+      createdAt: v.createdAt,
+      updatedAt: v.updatedAt,
+      user: v.user,
+      vehicle: v.vehicle
+    }));
+
+    res.json(safeVerifications);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getVerificationDocument = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id, type } = req.params as any;
+    if (type !== 'aadhaar' && type !== 'rc') {
+      res.status(400).json({ error: 'Invalid document type' });
+      return;
+    }
+
+    const verification = await prisma.vehicleVerification.findUnique({ where: { id } });
+    if (!verification) {
+      res.status(404).json({ error: 'Verification not found' });
+      return;
+    }
+
+    const fileName = type === 'aadhaar' ? verification.aadhaarDocPath : verification.rcDocPath;
+    if (!fileName) {
+      res.status(404).json({ error: 'Document not found' });
+      return;
+    }
+
+    const filePath = path.join(__dirname, '../../secure_uploads', fileName);
+    
+    // Check path traversal just in case
+    if (!filePath.startsWith(path.join(__dirname, '../../secure_uploads'))) {
+       res.status(403).json({ error: 'Forbidden path' });
+       return;
+    }
+
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'File not found on disk' });
+      return;
+    }
+
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const approveVerification = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+
+    const verification = await prisma.vehicleVerification.findUnique({ where: { id } });
+    if (!verification) {
+      res.status(404).json({ error: 'Verification not found' });
+      return;
+    }
+
+    if (verification.status !== 'PENDING') {
+      res.status(400).json({ error: 'Verification is not in PENDING state' });
+      return;
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const verif = await tx.vehicleVerification.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          rejectionReason: null
+        },
+        include: { vehicle: true }
+      });
+
+      // Check if active quota exists
+      const existingQuota = await tx.fuelQuota.findFirst({
+        where: { vehicleId: verif.vehicleId, isActive: true }
+      });
+
+      if (!existingQuota) {
+        // Find policy for vehicle type
+        const policy = await tx.quotaPolicy.findUnique({
+          where: { vehicleType: verif.vehicle.vehicleType }
+        });
+        
+        if (!policy) {
+          throw new Error(`No QuotaPolicy found for vehicle type ${verif.vehicle.vehicleType}. Cannot approve.`);
+        }
+
+        const now = new Date();
+        const endDate = new Date();
+        if (policy.period === 'WEEKLY') {
+          endDate.setDate(now.getDate() + 7);
+        } else {
+          endDate.setMonth(now.getMonth() + 1);
+        }
+
+        await tx.fuelQuota.create({
+          data: {
+            vehicleId: verif.vehicleId,
+            totalQuota: policy.defaultQuota,
+            remainingQuota: policy.defaultQuota,
+            period: policy.period,
+            startDate: now,
+            endDate: endDate,
+            isActive: true
+          }
+        });
+      }
+
+      return verif;
+    });
+
+    res.json({ success: true, status: updated.status });
+  } catch (error: any) {
+    console.error(error);
+    if (error.message && error.message.includes('QuotaPolicy found')) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const rejectVerification = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      res.status(400).json({ error: 'Rejection reason is required' });
+      return;
+    }
+
+    const verification = await prisma.vehicleVerification.findUnique({ where: { id } });
+    if (!verification) {
+      res.status(404).json({ error: 'Verification not found' });
+      return;
+    }
+
+    if (verification.status !== 'PENDING') {
+      res.status(400).json({ error: 'Verification is not in PENDING state' });
+      return;
+    }
+
+    const updated = await prisma.vehicleVerification.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        rejectionReason: reason.trim()
+      }
+    });
+
+    res.json({ success: true, status: updated.status });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const listPriorities = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const priorities = await prisma.vehiclePriority.findMany({
+      include: {
+        vehicle: true,
+        user: { select: { name: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const safePriorities = priorities.map(p => ({
+      id: p.id,
+      citizenName: p.user.name,
+      citizenEmail: p.user.email,
+      vehicleLicensePlate: p.vehicle.licensePlate,
+      vehicleType: p.vehicle.vehicleType,
+      serviceType: p.serviceType,
+      status: p.status,
+      submittedDate: p.createdAt,
+      reviewedDate: p.reviewedAt,
+      validUntil: p.validUntil,
+      reviewer: p.reviewedBy,
+      rejectionReason: p.rejectionReason
+    }));
+
+    res.json(safePriorities);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getPriorityDocument = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const priority = await prisma.vehiclePriority.findUnique({ where: { id } });
+
+    if (!priority) {
+      res.status(404).json({ error: 'Priority request not found' });
+      return;
+    }
+
+    const filePath = path.join(__dirname, '../../secure_uploads', priority.proofDocumentPath);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'Document file not found' });
+      return;
+    }
+
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const approvePriority = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+    const { validUntil } = req.body;
+
+    const priority = await prisma.vehiclePriority.findUnique({ where: { id } });
+    if (!priority) {
+      res.status(404).json({ error: 'Priority request not found' });
+      return;
+    }
+
+    if (priority.status !== 'PENDING') {
+      res.status(400).json({ error: 'Priority is not in PENDING state' });
+      return;
+    }
+
+    const updated = await prisma.vehiclePriority.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        rejectionReason: null,
+        validUntil: validUntil ? new Date(validUntil) : null
+      }
+    });
+
+    res.json({ success: true, status: updated.status });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const rejectPriority = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      res.status(400).json({ error: 'Rejection reason is required' });
+      return;
+    }
+
+    const priority = await prisma.vehiclePriority.findUnique({ where: { id } });
+    if (!priority) {
+      res.status(404).json({ error: 'Priority request not found' });
+      return;
+    }
+
+    if (priority.status !== 'PENDING') {
+      res.status(400).json({ error: 'Priority is not in PENDING state' });
+      return;
+    }
+
+    const updated = await prisma.vehiclePriority.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        rejectionReason: reason.trim()
+      }
+    });
+
+    res.json({ success: true, status: updated.status });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getAllocationRequests = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const requests = await prisma.fuelAllocationRequest.findMany({
+      include: {
+        station: { select: { name: true, location: true } },
+        requestedBy: { select: { name: true, email: true } },
+        reviewedBy: { select: { name: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(requests);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const approveAllocationRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.fuelAllocationRequest.findUnique({ where: { id } });
+      if (!request) throw new Error('Allocation request not found');
+      if (request.status !== 'PENDING') throw new Error('Request is not in PENDING state');
+
+      const station = await tx.station.findUnique({ where: { id: request.stationId } });
+      if (!station || !station.isActive) throw new Error('Station not found or inactive');
+
+      const inventory = await tx.fuelInventory.findUnique({
+        where: { stationId_fuelType: { stationId: request.stationId, fuelType: request.fuelType } }
+      });
+      if (!inventory) throw new Error('Station has no inventory tracking for this fuel type');
+      
+      const requestedQtyNum = request.requestedQuantity.toNumber();
+      const currentQtyNum = inventory.quantity.toNumber();
+      const capacityNum = inventory.capacity.toNumber();
+      
+      if (currentQtyNum + requestedQtyNum > capacityNum) {
+        throw new Error('Requested allocation exceeds station capacity');
+      }
+
+      await tx.fuelInventory.update({
+        where: { id: inventory.id },
+        data: { quantity: { increment: request.requestedQuantity } }
+      });
+
+      const updateCount = await tx.fuelAllocationRequest.updateMany({
+        where: { id, status: 'PENDING' },
+        data: {
+          status: 'APPROVED',
+          reviewedById: adminId,
+          reviewedAt: new Date(),
+          rejectionReason: null
+        }
+      });
+      
+      if (updateCount.count === 0) {
+        throw new Error('Request is not in PENDING state or was concurrently modified');
+      }
+
+      const updatedRequest = await tx.fuelAllocationRequest.findUnique({ where: { id } });
+
+      await tx.globalSupplyLog.create({
+        data: {
+          stationId: request.stationId,
+          fuelType: request.fuelType,
+          quantity: request.requestedQuantity,
+          eventType: 'ALLOCATION',
+          referenceId: request.id,
+          performedBy: adminId,
+          notes: 'Admin approved allocation request'
+        }
+      });
+
+      return updatedRequest;
+    });
+
+    res.json({ success: true, status: result!.status });
+  } catch (error: any) {
+    console.error(error);
+    if (error.message && (
+        error.message.includes('not found') || 
+        error.message.includes('PENDING state') || 
+        error.message.includes('exceeds') ||
+        error.message.includes('inventory tracking')
+    )) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const rejectAllocationRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as any;
+    const adminId = (req as any).user.id;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+      res.status(400).json({ error: 'Rejection reason is required' });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.fuelAllocationRequest.findUnique({ where: { id } });
+      if (!request) throw new Error('Allocation request not found');
+      if (request.status !== 'PENDING') throw new Error('Request is not in PENDING state');
+
+      const updateCount = await tx.fuelAllocationRequest.updateMany({
+        where: { id, status: 'PENDING' },
+        data: {
+          status: 'REJECTED',
+          reviewedById: adminId,
+          reviewedAt: new Date(),
+          rejectionReason: reason.trim()
+        }
+      });
+      
+      if (updateCount.count === 0) {
+        throw new Error('Request is not in PENDING state or was concurrently modified');
+      }
+      
+      const updatedRequest = await tx.fuelAllocationRequest.findUnique({ where: { id } });
+      return updatedRequest;
+    });
+
+    res.json({ success: true, status: result!.status });
+  } catch (error: any) {
+    console.error(error);
+    if (error.message && (error.message.includes('not found') || error.message.includes('PENDING state'))) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: 'Server error' });
+  }
+};

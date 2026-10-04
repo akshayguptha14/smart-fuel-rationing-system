@@ -1,0 +1,19 @@
+{
+  "name": "smart-fuel-system",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Smart Fuel Rationing and Optimization System",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
