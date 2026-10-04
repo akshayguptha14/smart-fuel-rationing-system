@@ -859,3 +859,84 @@ export const getCommandCentreData = async (req: Request, res: Response): Promise
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const getInventoryLedger = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { stationId, fuelType, eventType, startDate, endDate, page = '1', limit = '50' } = req.query;
+
+    const parsedPage = Math.max(1, parseInt(page as string, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 50));
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const where: any = {};
+
+    if (stationId) {
+      where.stationId = stationId as string;
+    }
+
+    if (fuelType) {
+      where.fuelType = fuelType as string;
+    }
+
+    if (eventType) {
+      where.eventType = eventType as string;
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        const parsedEndDate = new Date(endDate as string);
+        if (!isNaN(parsedEndDate.getTime())) {
+          parsedEndDate.setUTCHours(23, 59, 59, 999);
+          where.createdAt.lte = parsedEndDate;
+        } else {
+          where.createdAt.lte = new Date(endDate as string);
+        }
+      }
+    }
+
+    const [total, events] = await prisma.$transaction([
+      prisma.inventoryLedger.count({ where }),
+      prisma.inventoryLedger.findMany({
+        where,
+        skip,
+        take: parsedLimit,
+        orderBy: [
+          { createdAt: 'desc' },
+          { id: 'desc' }
+        ],
+        include: {
+          station: {
+            select: {
+              id: true,
+              name: true,
+              location: true
+            }
+          }
+        }
+      })
+    ]);
+
+    res.json({
+      data: events,
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        totalPages: Math.ceil(total / parsedLimit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
