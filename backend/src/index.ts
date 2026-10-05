@@ -10,6 +10,7 @@ import { reservationRoutes } from './routes/reservationRoutes';
 import { transactionRoutes } from './routes/transactionRoutes';
 import { policyRoutes } from './routes/policyRoutes';
 import { adminRoutes } from './routes/adminRoutes';
+import { fleetRoutes } from './routes/fleetRoutes';
 import { startQuotaScheduler } from './services/quotaScheduler';
 import { globalLimiter } from './middlewares/rateLimiter';
 import { getStationOwnerReservations } from './controllers/reservationController';
@@ -39,6 +40,7 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/fleet', fleetRoutes);
 
 app.get('/api/station/reservations', authenticate as any, getStationOwnerReservations);
 

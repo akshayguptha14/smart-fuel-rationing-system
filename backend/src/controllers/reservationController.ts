@@ -341,6 +341,12 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
         }
       }
 
+      let currentFleetId = null;
+      if (reservation.vehicleId) {
+        const veh = await tx.vehicle.findUnique({ where: { id: reservation.vehicleId } });
+        if (veh) currentFleetId = veh.fleetId;
+      }
+
       // Create transaction record
       const transaction = await tx.transaction.create({
         data: {
@@ -350,7 +356,9 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
           amount: new Prisma.Decimal(finalAmount),
           price: new Prisma.Decimal(0), // Would pull price dynamically in real app
           status: 'SUCCESS',
-          reservationId: reservation.id
+          reservationId: reservation.id,
+          vehicleIdSnapshot: reservation.vehicleId,
+          fleetIdSnapshot: currentFleetId
         }
       });
 

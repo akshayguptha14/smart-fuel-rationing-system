@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllReservations, getAllUsers, getAllTransactions, getSystemHealth, listVerifications, getVerificationDocument, approveVerification, rejectVerification, listPriorities, getPriorityDocument, approvePriority, rejectPriority, getAllocationRequests, approveAllocationRequest, rejectAllocationRequest, getCommandCentreData, getInventoryLedger, getForecasting, getAllocationIntelligence, dispatchRecommendedAllocation, getAnomalies } from '../controllers/adminController';
+import { getAllReservations, getAllUsers, getAllTransactions, getSystemHealth, listVerifications, getVerificationDocument, approveVerification, rejectVerification, listPriorities, getPriorityDocument, approvePriority, rejectPriority, getAllocationRequests, approveAllocationRequest, rejectAllocationRequest, getCommandCentreData, getInventoryLedger, getForecasting, getAllocationIntelligence, dispatchRecommendedAllocation, getAnomalies, updateUserRole } from '../controllers/adminController';
 import { authenticate } from '../middlewares/authMiddleware';
 
 export const adminRoutes = Router();
@@ -29,3 +29,4 @@ adminRoutes.post('/allocation-requests/:id/reject', rejectAllocationRequest);
 adminRoutes.post('/allocation-requests/dispatch-recommended', dispatchRecommendedAllocation);
 
 adminRoutes.get('/anomalies', getAnomalies);
+adminRoutes.put('/users/:id/role', updateUserRole);

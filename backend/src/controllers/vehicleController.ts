@@ -48,7 +48,7 @@ export const listVehicles = async (req: Request, res: Response): Promise<void> =
   try {
     const userId = (req as any).user.id;
     const role = (req as any).user.role;
-    
+
     let vehicles;
     if (role === 'ADMIN') {
       vehicles = await prisma.vehicle.findMany({ 
@@ -65,7 +65,7 @@ export const listVehicles = async (req: Request, res: Response): Promise<void> =
         }
       });
     }
-    
+
     res.json(vehicles);
   } catch (error) {
     console.error(error);
@@ -142,7 +142,7 @@ export const submitVehicleVerification = async (req: Request, res: Response): Pr
         res.status(409).json({ error: `Vehicle verification is already ${existingVerification.status}` });
         return;
       }
-      
+
       // Delete old files safely
       const uploadDir = path.join(__dirname, '../../secure_uploads');
       try {
@@ -165,7 +165,7 @@ export const submitVehicleVerification = async (req: Request, res: Response): Pr
           reviewedAt: null
         }
       });
-      
+
       res.json({
         id: updated.id,
         vehicleId: updated.vehicleId,
@@ -287,7 +287,7 @@ export const submitPriority = async (req: Request, res: Response): Promise<void>
         res.status(400).json({ error: 'Priority application already exists' });
         return;
       }
-      
+
       // Handle resubmission
       const uploadDir = path.join(__dirname, '../../secure_uploads');
       try {
@@ -308,7 +308,7 @@ export const submitPriority = async (req: Request, res: Response): Promise<void>
           validUntil: null
         }
       });
-      
+
       res.json({
         id: updated.id,
         vehicleId: updated.vehicleId,
@@ -379,6 +379,90 @@ export const getPriorityStatus = async (req: Request, res: Response): Promise<vo
       updatedAt: priority.updatedAt,
       reviewedAt: priority.reviewedAt
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const getCitizenFleetRequests = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const requests = await prisma.fleetJoinRequest.findMany({
+      where: { vehicle: { userId }, status: 'PENDING' },
+      select: { id: true, fleet: { select: { name: true } }, vehicleId: true, vehicle: { select: { licensePlate: true } }, status: true, createdAt: true }
+    });
+    res.json(requests);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const approveFleetRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { id, requestId } = req.params as { id: string, requestId: string };
+
+    const vehicle = await prisma.vehicle.findUnique({ where: { id } });
+    if (!vehicle || vehicle.userId !== userId) {
+      res.status(404).json({ error: 'Vehicle not found or unauthorized' });
+      return;
+    }
+
+    if (vehicle.fleetId) {
+      res.status(400).json({ error: 'Vehicle is already assigned to a fleet' });
+      return;
+    }
+
+    const request = await prisma.fleetJoinRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.vehicleId !== id || request.status !== 'PENDING') {
+      res.status(404).json({ error: 'Invalid or already processed request' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const currentReq = await tx.fleetJoinRequest.updateMany({
+        where: { id: requestId, status: 'PENDING' },
+        data: { status: 'APPROVED', reviewedAt: new Date() }
+      });
+      if (currentReq.count === 0) throw new Error('Request already processed');
+
+      await tx.vehicle.update({
+        where: { id },
+        data: { fleetId: request.fleetId }
+      });
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error(error);
+    res.status(400).json({ error: error.message || 'Server error' });
+  }
+};
+
+export const rejectFleetRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { id, requestId } = req.params as { id: string, requestId: string };
+
+    const vehicle = await prisma.vehicle.findUnique({ where: { id } });
+    if (!vehicle || vehicle.userId !== userId) {
+      res.status(404).json({ error: 'Vehicle not found or unauthorized' });
+      return;
+    }
+
+    const updatedReq = await prisma.fleetJoinRequest.updateMany({
+      where: { id: requestId, vehicleId: id, status: 'PENDING' },
+      data: { status: 'REJECTED', reviewedAt: new Date() }
+    });
+
+    if (updatedReq.count === 0) {
+      res.status(400).json({ error: 'Request already processed or invalid' });
+      return;
+    }
+
+    res.json({ success: true });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });

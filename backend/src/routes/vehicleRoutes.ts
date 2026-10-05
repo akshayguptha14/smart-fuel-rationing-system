@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { registerVehicle, listVehicles, getVehicleDetails, submitVehicleVerification, getVehicleVerificationStatus, submitPriority, getPriorityStatus } from '../controllers/vehicleController';
+import { registerVehicle, listVehicles, getVehicleDetails, submitVehicleVerification, getVehicleVerificationStatus, submitPriority, getPriorityStatus, getCitizenFleetRequests, approveFleetRequest, rejectFleetRequest } from '../controllers/vehicleController';
 import { authenticate } from '../middlewares/authMiddleware';
 import { upload } from '../middlewares/uploadMiddleware';
 
@@ -16,5 +16,9 @@ router.post('/:id/verify', upload.fields([
 router.get('/:id/verify', getVehicleVerificationStatus);
 router.post('/:id/priority', upload.single('proofDocument'), submitPriority);
 router.get('/:id/priority', getPriorityStatus);
+
+router.get('/fleet-requests', getCitizenFleetRequests);
+router.post('/:id/fleet-requests/:requestId/approve', approveFleetRequest);
+router.post('/:id/fleet-requests/:requestId/reject', rejectFleetRequest);
 
 export default router;

@@ -1658,3 +1658,43 @@ export const getAnomalies = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const updateUserRole = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { id } = req.params as { id: string };
+    const { role: newRole } = req.body;
+
+    if (newRole !== 'FLEET_OPERATOR') {
+      res.status(400).json({ error: 'Only FLEET_OPERATOR promotion is supported through this endpoint' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (user.role !== 'USER') {
+      res.status(400).json({ error: 'Only USER role can be promoted to FLEET_OPERATOR' });
+      return;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { role: newRole },
+      select: { id: true, name: true, email: true, role: true }
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

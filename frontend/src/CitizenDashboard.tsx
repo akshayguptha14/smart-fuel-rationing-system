@@ -91,6 +91,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
           <NavItem icon={<Droplet />} label="Book Fuel" active={activeTab === 'Book Fuel'} onClick={() => setActiveTab('Book Fuel')} />
           <NavItem icon={<Clock />} label="My Reservations" active={activeTab === 'My Reservations'} onClick={() => setActiveTab('My Reservations')} />
           <NavItem icon={<FileText />} label="Transaction History" active={activeTab === 'Transaction History'} onClick={() => setActiveTab('Transaction History')} />
+          <NavItem icon={<Users />} label="Fleet Requests" active={activeTab === 'Fleet Requests'} onClick={() => setActiveTab('Fleet Requests')} />
         </div>
         <div className="p-4 border-t border-[#00dc82]/20">
           <div className="flex items-center space-x-3 mb-4 px-2">
@@ -182,6 +183,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
           {activeTab === 'Book Fuel' && <BookFuelView vehicles={vehicles} stations={stations} token={token} onBooked={() => { fetchData(); setActiveTab('My Reservations'); }} />}
           {activeTab === 'My Reservations' && <ReservationsView reservations={reservations} token={token} onUpdate={fetchData} />}
           {activeTab === 'Transaction History' && <TransactionsView transactions={completedTransactions} />}
+          {activeTab === 'Fleet Requests' && <FleetRequestsView token={token} />}
 
         </div>
       </main>
@@ -928,6 +930,71 @@ function PriorityModal({ vehicle, token, onClose, onSuccess }: any) {
               {loading ? 'Submitting for review...' : 'Submit Request'}
             </button>
           </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FleetRequestsView({ token }: any) {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRequests = async () => {
+    try {
+      const res = await axios.get('http://localhost:3001/api/vehicles/fleet-requests', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRequests(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleAction = async (vehicleId: string, requestId: string, action: 'approve' | 'reject') => {
+    try {
+      await axios.post(`http://localhost:3001/api/vehicles/${vehicleId}/fleet-requests/${requestId}/${action}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchRequests();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to process request');
+    }
+  };
+
+  if (loading) return <div className="text-gray-400 p-8">Loading requests...</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="p-6 bg-[#02120e]/80 border border-blue-500/20 rounded-2xl">
+        <h3 className="text-xl font-bold text-white mb-2">Fleet Access Requests</h3>
+        <p className="text-sm text-gray-400 mb-6">
+          Fleet access gives the fleet operator analytical access to this vehicle. You remain the vehicle owner.
+        </p>
+        {requests.length === 0 ? (
+          <div className="text-gray-500 py-8 text-center">No pending fleet requests.</div>
+        ) : (
+          <div className="space-y-4">
+            {requests.map(req => (
+              <div key={req.id} className="flex items-center justify-between p-4 bg-gray-900 border border-gray-800 rounded-xl">
+                <div>
+                  <div className="text-white font-medium">{req.fleet.name}</div>
+                  <div className="text-gray-400 text-sm">Requests access to <span className="font-mono text-gray-300">{req.vehicle.licensePlate}</span></div>
+                </div>
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAction(req.vehicleId, req.id, 'reject')} className="px-4 py-2 bg-red-900/20 text-red-400 rounded hover:bg-red-900/40 text-sm transition-colors">Reject</button>
+                  <button onClick={() => handleAction(req.vehicleId, req.id, 'approve')} className="px-4 py-2 bg-emerald-900/20 text-emerald-400 rounded hover:bg-emerald-900/40 text-sm transition-colors">Approve</button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

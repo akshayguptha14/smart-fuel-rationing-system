@@ -4,6 +4,7 @@ import { Fuel, AlertCircle, Shield, Users, ArrowLeft, ArrowRight, Leaf, ShieldCh
 import AdminDashboard from './AdminDashboard';
 import StationOwnerDashboard from './StationOwnerDashboard';
 import CitizenDashboard from './CitizenDashboard';
+import FleetOperatorDashboard from './FleetOperatorDashboard';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -43,6 +44,19 @@ function App() {
   }
   if (user?.role === 'STATION_OWNER') {
     return <StationOwnerDashboard token={token} user={user} onLogout={handleLogout} />;
+  }
+
+  if (user?.role === 'FLEET_OPERATOR') {
+    return (
+      <div>
+        <div className="flex justify-end p-4 bg-gray-950">
+          <button onClick={handleLogout} className="text-red-400 hover:text-red-300 font-medium text-sm border border-red-900/50 hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors">
+            Log out
+          </button>
+        </div>
+        <FleetOperatorDashboard />
+      </div>
+    );
   }
 
   return <CitizenDashboard token={token} user={user} onLogout={handleLogout} />;
