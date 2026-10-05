@@ -141,7 +141,7 @@ export const getAllTransactions = async (req: Request, res: Response): Promise<v
         createdAt: 'desc'
       }
     });
-    
+
     // Also attach vehicle to transaction response by finding it via the reservation
     const transactionsWithVehicle = await Promise.all(transactions.map(async (t) => {
       let vehicle = null;
@@ -194,7 +194,7 @@ export const getSystemHealth = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: 'Degraded',
       api: 'Online',
       database: 'Disconnected',
@@ -267,7 +267,7 @@ export const getVerificationDocument = async (req: Request, res: Response): Prom
     }
 
     const filePath = path.join(__dirname, '../../secure_uploads', fileName);
-    
+
     // Check path traversal just in case
     if (!filePath.startsWith(path.join(__dirname, '../../secure_uploads'))) {
        res.status(403).json({ error: 'Forbidden path' });
@@ -330,7 +330,7 @@ export const approveVerification = async (req: Request, res: Response): Promise<
         const policy = await tx.quotaPolicy.findUnique({
           where: { vehicleType: verif.vehicle.vehicleType }
         });
-        
+
         if (!policy) {
           throw new Error(`No QuotaPolicy found for vehicle type ${verif.vehicle.vehicleType}. Cannot approve.`);
         }
@@ -615,11 +615,13 @@ export const approveAllocationRequest = async (req: Request, res: Response): Pro
         where: { stationId_fuelType: { stationId: request.stationId, fuelType: request.fuelType } }
       });
       if (!inventory) throw new Error('Station has no inventory tracking for this fuel type');
-      
+      const lockedInv: any[] = await tx.$queryRaw`SELECT quantity, capacity FROM "FuelInventory" WHERE id = ${inventory.id}::uuid FOR UPDATE`;
+      if (!lockedInv || lockedInv.length === 0) throw new Error('Station has no inventory tracking for this fuel type');
+
       const requestedQtyNum = request.requestedQuantity.toNumber();
-      const currentQtyNum = inventory.quantity.toNumber();
-      const capacityNum = inventory.capacity.toNumber();
-      
+      const currentQtyNum = Number(lockedInv[0].quantity);
+      const capacityNum = Number(lockedInv[0].capacity);
+
       if (currentQtyNum + requestedQtyNum > capacityNum) {
         throw new Error('Requested allocation exceeds station capacity');
       }
@@ -652,7 +654,7 @@ export const approveAllocationRequest = async (req: Request, res: Response): Pro
           rejectionReason: null
         }
       });
-      
+
       if (updateCount.count === 0) {
         throw new Error('Request is not in PENDING state or was concurrently modified');
       }
@@ -678,8 +680,8 @@ export const approveAllocationRequest = async (req: Request, res: Response): Pro
   } catch (error: any) {
     console.error(error);
     if (error.message && (
-        error.message.includes('not found') || 
-        error.message.includes('PENDING state') || 
+        error.message.includes('not found') ||
+        error.message.includes('PENDING state') ||
         error.message.includes('exceeds') ||
         error.message.includes('inventory tracking')
     )) {
@@ -721,11 +723,11 @@ export const rejectAllocationRequest = async (req: Request, res: Response): Prom
           rejectionReason: reason.trim()
         }
       });
-      
+
       if (updateCount.count === 0) {
         throw new Error('Request is not in PENDING state or was concurrently modified');
       }
-      
+
       const updatedRequest = await tx.fuelAllocationRequest.findUnique({ where: { id } });
       return updatedRequest;
     });
@@ -790,7 +792,7 @@ export const getCommandCentreData = async (req: Request, res: Response): Promise
 
     let totalInventoryQuantity = 0;
     let totalInventoryCapacity = 0;
-    
+
     // Group inventory by fuel type and station
     const fuelSummary: Record<string, { quantity: number, capacity: number }> = {};
     const stationSupplies = inventory.map(inv => {
@@ -988,7 +990,7 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
         }
 
         const relevantEvents = ledgerEvents.filter(e => e.stationId === station.id && e.fuelType === inv.fuelType);
-        
+
         const activeDaysSet = new Set(relevantEvents.map(e => e.createdAt.toISOString().split('T')[0]));
         const activeDays = activeDaysSet.size;
 
@@ -997,7 +999,7 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
         const refundedEvents = relevantEvents.filter(e => e.eventType === 'REFUNDED');
 
         const consumptionEvents = reservedEvents.length + dispensedEvents.length + refundedEvents.length;
-        
+
         const reservedMovement = reservedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
         const dispensedMovement = dispensedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
         const refundedMovement = refundedEvents.reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
@@ -1008,12 +1010,12 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
         const manualAdjustmentLiters = manualEvents.reduce((acc, val) => acc + val.quantityChange.toNumber(), 0);
 
         const netConsumedLiters = reservedMovement + dispensedMovement - refundedMovement;
-        
+
         let status = "INSUFFICIENT_DATA";
         let message = "Insufficient historical data";
         let netBurnRateLitersPerDay = null;
         let hoursUntilShortage = null;
-        
+
         let projected24h = null, projected48h = null, projected72h = null;
         let forecastedRisk24h = null, forecastedRisk48h = null, forecastedRisk72h = null;
         let recommendation = "INSUFFICIENT DATA — CONTINUE COLLECTING INVENTORY HISTORY";
@@ -1027,7 +1029,7 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
             status = "READY";
             message = "Forecast available";
             netBurnRateLitersPerDay = netConsumedLiters / windowDays;
-            
+
             if (currentInventory <= 0) {
               hoursUntilShortage = 0;
             } else {
@@ -1044,7 +1046,7 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
             projected24h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 1));
             projected48h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 2));
             projected72h = Math.max(0, currentInventory - (netBurnRateLitersPerDay * 3));
-            
+
             forecastedRisk24h = getProjectedRisk(projected24h);
             forecastedRisk48h = getProjectedRisk(projected48h);
             forecastedRisk72h = getProjectedRisk(projected72h);
@@ -1180,7 +1182,7 @@ export const getAllocationIntelligence = async (req: Request, res: Response): Pr
         }
 
         const relevantEvents = ledgerEvents.filter(e => e.stationId === station.id && e.fuelType === inv.fuelType);
-        
+
         const activeDaysSet = new Set(relevantEvents.map(e => e.createdAt.toISOString().split('T')[0]));
         const activeDays = activeDaysSet.size;
         const consumptionEventsCount = relevantEvents.filter(e => ['RESERVED', 'DISPENSED', 'REFUNDED'].includes(e.eventType)).length;
@@ -1223,15 +1225,15 @@ export const getAllocationIntelligence = async (req: Request, res: Response): Pr
         const relevantRequests = allocationRequests.filter(r => r.stationId === station.id && r.fuelType === inv.fuelType);
         const pendingRequestCount = relevantRequests.length;
         const pendingRequestedLiters = relevantRequests.reduce((acc, r) => acc + r.requestedQuantity.toNumber(), 0);
-        
+
         if (pendingRequestCount > 0) summary.pendingAllocationRequests += pendingRequestCount;
 
         const pendingRequestPoints = pendingRequestCount > 0 ? 10 : 0;
 
-        const relevantPriorityRes = priorityReservations.filter(r => 
-          r.stationId === station.id && 
-          r.fuelType === inv.fuelType && 
-          r.vehicle?.priority && 
+        const relevantPriorityRes = priorityReservations.filter(r =>
+          r.stationId === station.id &&
+          r.fuelType === inv.fuelType &&
+          r.vehicle?.priority &&
           ['AMBULANCE', 'FARMER', 'PUBLIC_TRANSPORT'].includes(r.vehicle.priority.serviceType)
         );
         const priorityReservationCount = relevantPriorityRes.length;
@@ -1250,7 +1252,7 @@ export const getAllocationIntelligence = async (req: Request, res: Response): Pr
           else if (urgencyScore >= 50) urgencyClassification = "HIGH";
           else if (urgencyScore >= 25) urgencyClassification = "MEDIUM";
           else urgencyClassification = "LOW";
-          
+
           if (urgencyClassification === "URGENT") summary.urgent++;
           else if (urgencyClassification === "HIGH") summary.high++;
           else if (urgencyClassification === "MEDIUM") summary.medium++;
@@ -1260,7 +1262,7 @@ export const getAllocationIntelligence = async (req: Request, res: Response): Pr
           else if (urgencyScore >= 50) urgencyClassification = "HIGH";
           else if (urgencyScore >= 25) urgencyClassification = "MEDIUM";
           else urgencyClassification = "LOW";
-          
+
           if (urgencyClassification === "URGENT") summary.urgent++;
           else if (urgencyClassification === "HIGH") summary.high++;
           else if (urgencyClassification === "MEDIUM") summary.medium++;
@@ -1346,6 +1348,154 @@ export const getAllocationIntelligence = async (req: Request, res: Response): Pr
 
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const dispatchRecommendedAllocation = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const { stationId, fuelType } = req.body;
+    const adminId = (req as any).user.id;
+
+    if (!stationId || !fuelType) {
+      res.status(400).json({ error: 'stationId and fuelType are required' });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const station = await tx.station.findUnique({ where: { id: stationId } });
+      if (!station || !station.isActive) throw new Error('Station not found or inactive');
+
+      const inventory = await tx.fuelInventory.findUnique({
+        where: { stationId_fuelType: { stationId, fuelType } }
+      });
+      if (!inventory) throw new Error('Station has no inventory tracking for this fuel type');
+
+      const lockedInv: any[] = await tx.$queryRaw`SELECT quantity, capacity FROM "FuelInventory" WHERE id = ${inventory.id}::uuid FOR UPDATE`;
+      if (!lockedInv || lockedInv.length === 0) throw new Error('Station has no inventory tracking for this fuel type');
+
+      const currentQtyNum = Number(lockedInv[0].quantity);
+      const capacityNum = Number(lockedInv[0].capacity);
+
+      const inventoryPercentage = capacityNum > 0 ? (currentQtyNum / capacityNum) * 100 : 0;
+      let currentRisk = "NORMAL";
+      if (inventoryPercentage < 20) {
+        currentRisk = "CRITICAL";
+      } else if (inventoryPercentage <= 50) {
+        currentRisk = "LOW";
+      }
+
+      if (currentRisk === "NORMAL") {
+        throw new Error('No replenishment required for a NORMAL-risk inventory.');
+      }
+
+      const targetInventory = capacityNum * 0.80;
+      const recommendedAllocation = Math.max(0, targetInventory - currentQtyNum);
+
+      if (recommendedAllocation <= 0) {
+        throw new Error('No recommended allocation available.');
+      }
+
+      if (currentQtyNum + recommendedAllocation > capacityNum) {
+        throw new Error('Requested allocation exceeds station capacity');
+      }
+
+      const request = await tx.fuelAllocationRequest.create({
+        data: {
+          stationId,
+          fuelType,
+          requestedById: adminId,
+          requestedQuantity: recommendedAllocation,
+          status: 'PENDING',
+          reason: 'OMC Recommended Replenishment'
+        }
+      });
+
+      await tx.fuelInventory.update({
+        where: { id: inventory.id },
+        data: { quantity: { increment: recommendedAllocation } }
+      });
+
+      const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+      if (currentInv) {
+        await tx.inventoryLedger.create({
+          data: {
+            stationId,
+            fuelType,
+            eventType: 'SUPPLIED',
+            quantityChange: recommendedAllocation,
+            quantityAfter: currentInv.quantity,
+            referenceId: request.id
+          }
+        });
+      }
+
+      await tx.fuelAllocationRequest.updateMany({
+        where: { id: request.id, status: 'PENDING' },
+        data: {
+          status: 'APPROVED',
+          reviewedById: adminId,
+          reviewedAt: new Date()
+        }
+      });
+
+      await tx.globalSupplyLog.create({
+        data: {
+          stationId,
+          fuelType,
+          quantity: recommendedAllocation,
+          eventType: 'ALLOCATION',
+          referenceId: request.id,
+          performedBy: adminId,
+          notes: 'Admin approved allocation request'
+        }
+      });
+
+      const updatedRequest = await tx.fuelAllocationRequest.findUnique({ where: { id: request.id } });
+
+      let riskAfter = "NORMAL";
+      const newInvPercentage = capacityNum > 0 ? (currentInv!.quantity.toNumber() / capacityNum) * 100 : 0;
+      if (newInvPercentage < 20) {
+        riskAfter = "CRITICAL";
+      } else if (newInvPercentage <= 50) {
+        riskAfter = "LOW";
+      }
+
+      return {
+        requestId: request.id,
+        stationId,
+        stationName: station.name,
+        fuelType,
+        allocatedQuantity: recommendedAllocation,
+        inventoryBefore: currentQtyNum,
+        inventoryAfter: currentInv!.quantity.toNumber(),
+        capacity: capacityNum,
+        riskBefore: currentRisk,
+        riskAfter,
+        reason: 'OMC Recommended Replenishment',
+        reviewedBy: adminId,
+        reviewedAt: updatedRequest!.reviewedAt
+      };
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error(error);
+    if (error.message && (
+        error.message.includes('not found') ||
+        error.message.includes('NORMAL-risk') ||
+        error.message.includes('No recommended allocation') ||
+        error.message.includes('exceeds station capacity')
+    )) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     res.status(500).json({ error: 'Server error' });
   }
 };
