@@ -4,7 +4,7 @@ import {
   Landmark, Settings, FileText, Search, Bell, MapPin, Map as MapIcon,
   LogOut, Activity, BarChart3, Users, Clock, ArrowRight, ShieldCheck,
   AlertCircle, RefreshCw, Zap, Droplet, Database, History, TrendingUp,
-  Globe
+  Globe, ShieldAlert
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -23,6 +23,7 @@ import CommandCentreModule from './CommandCentreModule';
 import InventoryLedgerModule from './InventoryLedgerModule';
 import ForecastingModule from './ForecastingModule';
 import OMCIntelligenceModule from './OMCIntelligenceModule';
+import AnomaliesModule from './AnomaliesModule';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -120,6 +121,7 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
           <NavItem icon={<History />} label="Inventory Ledger" active={activeTab === 'Inventory Ledger'} onClick={() => setActiveTab('Inventory Ledger')} />
           <NavItem icon={<TrendingUp />} label="Forecasting / Supply Intelligence" active={activeTab === 'Forecasting / Supply Intelligence'} onClick={() => setActiveTab('Forecasting / Supply Intelligence')} />
           <NavItem icon={<Globe />} label="OMC Intelligence" active={activeTab === 'OMC Intelligence'} onClick={() => setActiveTab('OMC Intelligence')} />
+          <NavItem icon={<ShieldAlert />} label="Anomalies" active={activeTab === 'Anomalies'} onClick={() => setActiveTab('Anomalies')} />
           <NavItem icon={<Settings />} label="System Settings" active={activeTab === 'System Settings'} onClick={() => setActiveTab('System Settings')} />
         </div>
         
@@ -486,6 +488,8 @@ export default function AdminDashboard({ token, user, onLogout }: any) {
         <ForecastingModule token={token} />
       ) : activeTab === 'OMC Intelligence' ? (
         <OMCIntelligenceModule token={token} />
+      ) : activeTab === 'Anomalies' ? (
+        <AnomaliesModule token={token} />
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <h2 className="text-2xl font-bold text-white mb-2">{activeTab}</h2>

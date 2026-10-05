@@ -1499,3 +1499,162 @@ export const dispatchRecommendedAllocation = async (req: Request, res: Response)
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const getAnomalies = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Rule 1: Rapid Purchase
+    const rapidPurchases = await prisma.transaction.groupBy({
+      by: ['userId'],
+      where: {
+        status: 'SUCCESS',
+        createdAt: { gte: twentyFourHoursAgo }
+      },
+      _count: { id: true },
+      _max: { createdAt: true }
+    });
+
+    // Rule 3: Phantom Bookings
+    const phantomBookings = await prisma.reservation.groupBy({
+      by: ['userId'],
+      where: {
+        status: { in: ['CANCELLED', 'EXPIRED'] },
+        createdAt: { gte: sevenDaysAgo }
+      },
+      _count: { id: true },
+      _max: { createdAt: true }
+    });
+
+    // Rule 2: Quota Velocity
+    const activeQuotas = await prisma.fuelQuota.findMany({
+      where: { isActive: true },
+      include: { vehicle: { select: { userId: true, user: { select: { name: true, email: true } }, licensePlate: true, vehicleType: true } } }
+    });
+
+    const userFlags: Record<string, any[]> = {};
+
+    const addUserFlag = (userId: string, flag: any) => {
+      if (!userFlags[userId]) userFlags[userId] = [];
+      userFlags[userId].push(flag);
+    };
+
+    for (const rp of rapidPurchases) {
+      if (rp._count.id > 2) {
+        addUserFlag(rp.userId, {
+          anomalyType: 'RAPID_PURCHASE',
+          metric: `${rp._count.id} successful purchases in 24h`,
+          lastActivityAt: rp._max.createdAt,
+          severity: 'HIGH'
+        });
+      }
+    }
+
+    for (const pb of phantomBookings) {
+      if (pb._count.id > 3) {
+        addUserFlag(pb.userId, {
+          anomalyType: 'PHANTOM_BOOKING',
+          metric: `${pb._count.id} cancelled/expired reservations in 7 days`,
+          lastActivityAt: pb._max.createdAt,
+          severity: 'HIGH' // or depends on logic, maybe HIGH
+        });
+      }
+    }
+
+    for (const quota of activeQuotas) {
+      const total = quota.totalQuota.toNumber();
+      const remaining = quota.remainingQuota.toNumber();
+      const consumed = total - remaining;
+      const consumedPercentage = total > 0 ? (consumed / total) * 100 : 0;
+
+      const msSinceStart = now.getTime() - quota.startDate.getTime();
+      const hoursSinceStart = msSinceStart / (1000 * 60 * 60);
+
+      if (consumedPercentage > 90 && hoursSinceStart <= 48) {
+        addUserFlag(quota.vehicle.userId, {
+          anomalyType: 'QUOTA_VELOCITY',
+          metric: `${Math.round(consumedPercentage)}% of quota consumed within first 48h`,
+          lastActivityAt: quota.updatedAt,
+          severity: 'HIGH',
+          vehicle: {
+            licensePlate: quota.vehicle.licensePlate,
+            vehicleType: quota.vehicle.vehicleType
+          }
+        });
+      }
+    }
+
+    // Now gather user details for those flagged
+    const flaggedUserIds = Object.keys(userFlags);
+    let anomalies: any[] = [];
+
+    if (flaggedUserIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: flaggedUserIds } },
+        select: { id: true, name: true, email: true }
+      });
+
+      const userMap = users.reduce((acc: any, u: any) => {
+        acc[u.id] = u;
+        return acc;
+      }, {});
+
+      for (const userId of flaggedUserIds) {
+        const user = userMap[userId];
+        if (!user) continue;
+
+        const flags = userFlags[userId];
+        const isMultiple = flags.length > 1;
+
+        for (const flag of flags) {
+          // Adjust severity based on multiple flags
+          let severity = 'MEDIUM';
+          if (isMultiple || flag.anomalyType === 'QUOTA_VELOCITY' || flag.anomalyType === 'RAPID_PURCHASE') {
+             // For the sake of the deterministic logic requested, if multiple rules triggered it's HIGH, otherwise MEDIUM unless it significantly exceeds threshold (which we didn't specify exactly, so let's default individual to MEDIUM unless multiple).
+             // Actually requirement says: "HIGH: multiple anomaly rules triggered OR individual rule significantly above threshold. MEDIUM: one rule triggered."
+             severity = isMultiple ? 'HIGH' : 'MEDIUM';
+             if (flag.anomalyType === 'RAPID_PURCHASE' && parseInt(flag.metric) > 4) severity = 'HIGH';
+             if (flag.anomalyType === 'PHANTOM_BOOKING' && parseInt(flag.metric) > 5) severity = 'HIGH';
+             if (flag.anomalyType === 'QUOTA_VELOCITY' && parseFloat(flag.metric) > 95) severity = 'HIGH';
+          }
+
+          anomalies.push({
+            userId: user.id,
+            userName: user.name || 'Unknown',
+            email: user.email,
+            anomalyType: flag.anomalyType,
+            severity,
+            metric: flag.metric,
+            lastActivityAt: flag.lastActivityAt,
+            vehicleInfo: flag.vehicle || undefined
+          });
+        }
+      }
+    }
+
+    anomalies.sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
+
+    res.json({
+      generatedAt: now.toISOString(),
+      totalFlaggedUsers: flaggedUserIds.length,
+      totalFlags: anomalies.length,
+      highSeverityFlags: anomalies.filter(a => a.severity === 'HIGH').length,
+      mediumSeverityFlags: anomalies.filter(a => a.severity === 'MEDIUM').length,
+      rapidPurchaseFlags: anomalies.filter(a => a.anomalyType === 'RAPID_PURCHASE').length,
+      quotaVelocityFlags: anomalies.filter(a => a.anomalyType === 'QUOTA_VELOCITY').length,
+      phantomBookingFlags: anomalies.filter(a => a.anomalyType === 'PHANTOM_BOOKING').length,
+      anomalies
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
