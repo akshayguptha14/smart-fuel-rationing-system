@@ -1,7 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+let DefaultIcon = L.icon({ iconUrl: icon, shadowUrl: iconShadow, iconSize: [25, 41], iconAnchor: [12, 41] });
+L.Marker.prototype.options.icon = DefaultIcon;
 import axios from 'axios';
-import { 
-  Users, Car, Droplet, Clock, FileText, LogOut, Activity, MapPin, 
+import {
+  Users, Car, Droplet, Clock, FileText, LogOut, Activity, MapPin,
   AlertCircle, XCircle, Plus, CheckCircle2, ChevronRight, RefreshCw,
   ShieldAlert, ShieldCheck, ShieldEllipsis, ShieldX, UploadCloud
 } from 'lucide-react';
@@ -63,7 +70,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
 
   const activeReservations = reservations.filter(r => r.status === 'PENDING');
   const completedTransactions = reservations.filter(r => r.status === 'COMPLETED');
-  
+
   const totalRemainingQuota = vehicles.reduce((sum, v) => {
     const q = v.fuelQuotas?.[0];
     return sum + (q ? parseFloat(q.remainingQuota) : 0);
@@ -139,7 +146,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl flex items-center mb-6"><AlertCircle className="w-5 h-5 mr-3" />{error}</div>}
-          
+
           {activeTab === 'Overview' && (
             <div className="space-y-6">
               <div className="p-8 rounded-3xl relative overflow-hidden border border-[#00dc82]/30 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'rgba(2, 25, 20, 0.65)', backdropFilter: 'blur(16px)' }}>
@@ -148,7 +155,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
                   <p className="text-[#00dc82] text-sm font-medium mb-1">Welcome back, {user?.name || 'Citizen'}</p>
                   <h1 className="text-3xl font-bold text-white mb-2">Your fuel access, simplified.</h1>
                   <p className="text-gray-300 text-sm max-w-xl mb-6">Manage your vehicles, monitor your fuel quota and reserve fuel securely.</p>
-                  
+
                   {primaryVehicle && (
                     <div className="inline-flex flex-col bg-[#02120e]/80 border border-[#00dc82]/20 rounded-2xl p-4 min-w-[250px]">
                       <div className="flex justify-between items-center mb-3">
@@ -168,7 +175,7 @@ export default function CitizenDashboard({ token, user, onLogout }: any) {
                 <MetricCard title="Active Reservations" value={activeReservations.length.toString()} icon={<Clock />} />
                 <MetricCard title="Completed Transactions" value={completedTransactions.length.toString()} icon={<FileText />} />
               </div>
-              
+
               <h3 className="text-xl font-bold text-white mt-8 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <QuickAction icon={<Droplet />} label="Book Fuel" onClick={() => setActiveTab('Book Fuel')} />
@@ -290,7 +297,7 @@ function VehiclesView({ vehicles, token, onUpdate }: any) {
                   </div>
                   <span className="text-xs bg-gray-800 text-gray-300 px-3 py-1 rounded-full border border-gray-700">{v.vehicleType}</span>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
                     <div className="text-sm text-gray-400 mb-2 flex justify-between">
@@ -307,7 +314,7 @@ function VehiclesView({ vehicles, token, onUpdate }: any) {
                     <span className="text-gray-500">{active ? 'Monthly Period' : 'No active policy'}</span>
                     {active && <span className="flex items-center text-[#00dc82]"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</span>}
                   </div>
-                  
+
                   {/* Verification Status */}
                   <div className="mt-4 pt-4 border-t border-gray-700/50">
                     {v.verification?.status === 'APPROVED' && (
@@ -316,7 +323,7 @@ function VehiclesView({ vehicles, token, onUpdate }: any) {
                           <ShieldCheck className="w-4 h-4 mr-2" /> Verified
                         </div>
                         <div className="text-xs text-gray-400">Vehicle verification approved. Aadhaar ending in &bull;&bull;&bull;&bull;{v.verification.aadhaarLast4}</div>
-                        
+
                         {/* Priority Section */}
                         <div className="mt-4 pt-4 border-t border-gray-700/50">
                           {v.priority?.status === 'APPROVED' && (
@@ -418,44 +425,89 @@ function VehiclesView({ vehicles, token, onUpdate }: any) {
       )}
 
       {verificationModalVehicle && (
-        <VerificationModal 
-          vehicle={verificationModalVehicle} 
-          token={token} 
-          onClose={() => setVerificationModalVehicle(null)} 
-          onSuccess={() => { setVerificationModalVehicle(null); onUpdate(); }} 
+        <VerificationModal
+          vehicle={verificationModalVehicle}
+          token={token}
+          onClose={() => setVerificationModalVehicle(null)}
+          onSuccess={() => { setVerificationModalVehicle(null); onUpdate(); }}
         />
       )}
 
       {priorityModalVehicle && (
-        <PriorityModal 
-          vehicle={priorityModalVehicle} 
-          token={token} 
-          onClose={() => setPriorityModalVehicle(null)} 
-          onSuccess={() => { setPriorityModalVehicle(null); onUpdate(); }} 
+        <PriorityModal
+          vehicle={priorityModalVehicle}
+          token={token}
+          onClose={() => setPriorityModalVehicle(null)}
+          onSuccess={() => { setPriorityModalVehicle(null); onUpdate(); }}
         />
       )}
     </div>
   );
 }
 
+
+function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function MapUpdater({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+}
+
 function BookFuelView({ vehicles, stations, token, onBooked }: any) {
   const [vehicle, setVehicle] = useState('');
-  const [station, setStation] = useState('');
+  const [stationId, setStationId] = useState('');
   const [fuelType, setFuelType] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
+        err => console.log('Location not available')
+      );
+    }
+  }, []);
+
+  const sortedStations = useMemo(() => {
+    if (!userLoc) return stations;
+    return [...stations].map(s => {
+      if (s.latitude && s.longitude) {
+        return { ...s, distance: getHaversineDistance(userLoc[0], userLoc[1], s.latitude, s.longitude) };
+      }
+      return { ...s, distance: Infinity };
+    }).sort((a, b) => a.distance - b.distance);
+  }, [stations, userLoc]);
 
   const selectedVData = vehicles.find((v:any) => v.id === vehicle);
   const remaining = selectedVData?.fuelQuotas?.[0]?.remainingQuota || 0;
-  
   const isVehicleVerified = selectedVData?.verification?.status === 'APPROVED';
+
+  const selectedStation = stations.find((s: any) => s.id === stationId);
+
+  const fuelOptions = selectedStation ? selectedStation.inventory : [];
+  const selectedFuel = fuelOptions.find((f: any) => f.fuelType === fuelType);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoading(true);
     try {
       await axios.post(`${API_URL}/reservations`, {
-        vehicleId: vehicle, stationId: station, fuelType, amount: parseFloat(amount)
+        vehicleId: vehicle, stationId, fuelType, amount: parseFloat(amount)
       }, { headers: { Authorization: `Bearer ${token}` } });
       onBooked();
     } catch (err: any) {
@@ -463,92 +515,185 @@ function BookFuelView({ vehicles, stations, token, onBooked }: any) {
     } finally { setLoading(false); }
   };
 
+  const mapCenter = userLoc || (stations.length > 0 && stations[0].latitude ? [stations[0].latitude, stations[0].longitude] : [20.5937, 78.9629]);
+
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Reserve Fuel</h2>
-        <p className="text-gray-400 text-sm">Secure your fuel reservation before visiting the station.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Locate & Reserve</h2>
+        <p className="text-gray-400 text-sm">Find the nearest station, check live availability, and reserve fuel.</p>
       </div>
-      
+
       {error && <div className="mb-6 p-4 bg-red-900/20 border border-red-500/30 text-red-400 rounded-xl flex items-center text-sm"><AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />{error}</div>}
-      
-      <form onSubmit={handleBook} className="space-y-6">
-        <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
-          <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 1: Select Vehicle</h3>
-          <select required className="w-full p-4 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none mb-4" value={vehicle} onChange={e => setVehicle(e.target.value)}>
-            <option value="">-- Choose Vehicle --</option>
-            {vehicles.map((v:any) => <option key={v.id} value={v.id}>{v.licensePlate} ({v.vehicleType}) - {v.fuelQuotas?.[0]?.remainingQuota || 0} L remaining</option>)}
-          </select>
-          
-          {selectedVData && !isVehicleVerified && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start mb-4">
-              <ShieldAlert className="w-5 h-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-amber-400 font-bold text-sm">Vehicle verification required</h4>
-                <p className="text-gray-400 text-xs mt-1">Complete manual document verification before booking fuel with this vehicle.</p>
-              </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Side: Map and Station List */}
+        <div className="space-y-6">
+          <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-4 h-[400px] overflow-hidden relative">
+             <MapContainer center={mapCenter as any} zoom={11} style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}>
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                />
+                <MapUpdater center={mapCenter as any} />
+                {userLoc && (
+                   <Marker position={userLoc} icon={L.divIcon({ className: 'bg-blue-500 rounded-full w-4 h-4 border-2 border-white' })} />
+                )}
+                {sortedStations.map((s: any) => s.latitude && s.longitude ? (
+                  <Marker
+                    key={s.id}
+                    position={[s.latitude, s.longitude]}
+                    eventHandlers={{ click: () => setStationId(s.id) }}
+                  >
+                    <Popup>
+                      <div className="text-gray-900 font-bold mb-1">{s.name}</div>
+                      <div className="text-xs text-gray-700 mb-2">{s.address || s.location}</div>
+                      <div className="space-y-1">
+                        {s.inventory?.map((inv: any) => (
+                           <div key={inv.fuelType} className="text-xs flex justify-between gap-4">
+                             <span className="font-semibold">{inv.fuelType}</span>
+                             <span>{inv.status === 'AVAILABLE' ? '🟢' : inv.status === 'LOW' ? '🟡' : '🔴'} {inv.price ? `₹${inv.price}/L` : 'No Price'}</span>
+                           </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setStationId(s.id)}
+                        className="mt-2 w-full bg-[#00dc82] text-white font-bold py-1 px-2 rounded text-xs"
+                      >
+                        Select Station
+                      </button>
+                    </Popup>
+                  </Marker>
+                ) : null)}
+             </MapContainer>
+          </div>
+
+          <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-4 max-h-[300px] overflow-y-auto">
+            <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Nearby Stations</h3>
+            <div className="space-y-3">
+              {sortedStations.map((s: any) => (
+                <div
+                  key={s.id}
+                  onClick={() => setStationId(s.id)}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all ${stationId === s.id ? 'bg-[#00dc82]/10 border-[#00dc82]' : 'bg-[#020a08] border-gray-700 hover:border-gray-500'}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-white text-sm">{s.name}</div>
+                      <div className="text-xs text-gray-400 mt-1">{s.address || s.location}</div>
+                    </div>
+                    {s.distance !== undefined && s.distance !== Infinity && (
+                      <div className="text-xs font-semibold text-[#00dc82]">
+                        {s.distance.toFixed(1)} km
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                     {s.inventory?.map((inv: any) => (
+                       <span key={inv.fuelType} className={`text-[10px] px-2 py-1 rounded-full border ${inv.status === 'OUT_OF_STOCK' ? 'bg-red-500/10 border-red-500/30 text-red-400' : inv.status === 'PRICE_NOT_CONFIGURED' ? 'bg-gray-500/10 border-gray-500/30 text-gray-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
+                         {inv.fuelType}: {inv.price ? `₹${inv.price}` : 'No Price'}
+                       </span>
+                     ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-
-          {selectedVData && selectedVData.priority?.status === 'APPROVED' && (
-            <div className="p-4 bg-[#00dc82]/10 border border-[#00dc82]/30 rounded-xl flex items-center">
-              <div className="w-8 h-8 rounded-full bg-[#00dc82]/20 flex items-center justify-center mr-3 text-[#00dc82]">
-                {selectedVData.priority.serviceType === 'AMBULANCE' ? '🚑' : selectedVData.priority.serviceType === 'FARMER' ? '🚜' : '🚌'}
-              </div>
-              <div>
-                <div className="text-[#00dc82] font-bold text-sm">Priority Service</div>
-                <div className="text-gray-400 text-xs mt-0.5 capitalize">{selectedVData.priority.serviceType.replace('_', ' ').toLowerCase()}</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
-          <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 2: Select Station</h3>
-          <select required className="w-full p-4 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none" value={station} onChange={e => setStation(e.target.value)}>
-            <option value="">-- Choose Station --</option>
-            {stations.map((s:any) => <option key={s.id} value={s.id}>{s.name} - {s.location}</option>)}
-          </select>
-        </div>
-
-        <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
-          <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 3: Fuel Type</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['PETROL', 'DIESEL', 'HYBRID', 'ELECTRIC'].map(ft => (
-              <button key={ft} type="button" onClick={() => setFuelType(ft)} className={`p-4 rounded-xl border flex flex-col items-center justify-center transition-all ${fuelType === ft ? 'bg-[#00dc82]/20 border-[#00dc82] text-white' : 'bg-[#020a08] border-gray-700 text-gray-400 hover:border-gray-500'}`}>
-                <Droplet className={`w-6 h-6 mb-2 ${fuelType === ft ? 'text-[#00dc82]' : ''}`} />
-                <span className="text-sm font-semibold">{ft}</span>
-              </button>
-            ))}
           </div>
         </div>
 
-        <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
-          <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 4: Amount</h3>
-          <div className="flex flex-col md:flex-row gap-6 items-center">
-            <div className="flex-1 w-full">
-              <div className="relative">
-                <input type="number" required min="1" step="0.01" placeholder="Enter liters" className="w-full p-4 pr-12 bg-[#020a08] border border-gray-700 rounded-xl text-white text-xl font-bold focus:border-[#00dc82] focus:outline-none" value={amount} onChange={e => setAmount(e.target.value)} />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">L</span>
+        {/* Right Side: Booking Form */}
+        <div>
+          <form onSubmit={handleBook} className="space-y-6">
+            <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
+              <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 1: Select Vehicle</h3>
+              <select required className="w-full p-4 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none mb-4" value={vehicle} onChange={e => setVehicle(e.target.value)}>
+                <option value="">-- Choose Vehicle --</option>
+                {vehicles.map((v:any) => <option key={v.id} value={v.id}>{v.licensePlate} ({v.vehicleType}) - {v.fuelQuotas?.[0]?.remainingQuota || 0} L remaining</option>)}
+              </select>
+
+              {selectedVData && !isVehicleVerified && (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start mb-4">
+                  <ShieldAlert className="w-5 h-5 text-amber-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-amber-400 font-bold text-sm">Vehicle verification required</h4>
+                    <p className="text-gray-400 text-xs mt-1">Complete manual document verification before booking fuel with this vehicle.</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedVData && selectedVData.priority?.status === 'APPROVED' && (
+                <div className="p-4 bg-[#00dc82]/10 border border-[#00dc82]/30 rounded-xl flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-[#00dc82]/20 flex items-center justify-center mr-3 text-[#00dc82]">
+                    {selectedVData.priority.serviceType === 'AMBULANCE' ? '??' : selectedVData.priority.serviceType === 'FARMER' ? '??' : '??'}
+                  </div>
+                  <div>
+                    <div className="text-[#00dc82] font-bold text-sm">Priority Service</div>
+                    <div className="text-gray-400 text-xs mt-0.5 capitalize">{selectedVData.priority.serviceType.replace('_', ' ').toLowerCase()}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={\g-[#041812]/70 backdrop-blur-md border \ rounded-2xl p-6 transition-all\}>
+              <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 2: Fuel Type</h3>
+              {!stationId ? (
+                <div className="text-sm text-gray-400 text-center py-4">Please select a station from the map first.</div>
+              ) : fuelOptions.length === 0 ? (
+                <div className="text-sm text-red-400 text-center py-4">No fuel available at this station.</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {fuelOptions.map((ft: any) => (
+                    <button
+                      key={ft.fuelType}
+                      type="button"
+                      onClick={() => setFuelType(ft.fuelType)}
+                      disabled={ft.status === 'OUT_OF_STOCK' || ft.status === 'PRICE_NOT_CONFIGURED'}
+                      className={p-4 rounded-xl border flex flex-col items-center justify-center transition-all  }
+                    >
+                      <Droplet className={w-6 h-6 mb-2 } />
+                      <span className="text-sm font-semibold">{ft.fuelType}</span>
+                      <span className="text-xs mt-1 font-bold">{ft.price ? ₹/L : 'No Price'}</span>
+                      <span className={	ext-[10px] mt-1 }>
+                        {ft.status.replace(/_/g, ' ')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-[#041812]/70 backdrop-blur-md border border-gray-800 rounded-2xl p-6">
+              <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 3: Amount</h3>
+              <div className="flex flex-col gap-4">
+                <div className="w-full">
+                  <div className="relative">
+                    <input type="number" required min="1" step="0.01" placeholder="Enter liters" className="w-full p-4 pr-12 bg-[#020a08] border border-gray-700 rounded-xl text-white text-xl font-bold focus:border-[#00dc82] focus:outline-none disabled:opacity-50" value={amount} onChange={e => setAmount(e.target.value)} disabled={!fuelType} />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">L</span>
+                  </div>
+                </div>
+                {vehicle && (
+                  <div className="w-full p-4 bg-gray-900/50 rounded-xl border border-gray-800 text-sm">
+                    <div className="flex justify-between mb-1"><span className="text-gray-400">Remaining Quota:</span><span className="text-white font-bold">{remaining} L</span></div>
+                    <div className="flex justify-between mb-1"><span className="text-gray-400">After Reservation:</span><span className={\ont-bold \}>{amount ? (parseFloat(remaining) - parseFloat(amount)).toFixed(2) : remaining} L</span></div>
+                    {selectedFuel && selectedFuel.price && amount && (
+                      <div className="flex justify-between mt-2 pt-2 border-t border-gray-800">
+                        <span className="text-gray-400">Estimated Total:</span>
+                        <span className="text-white font-bold">?{(parseFloat(amount) * selectedFuel.price).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            {vehicle && (
-              <div className="w-full md:w-auto p-4 bg-gray-900/50 rounded-xl border border-gray-800 text-sm">
-                <div className="flex justify-between mb-1"><span className="text-gray-400">Remaining Quota:</span><span className="text-white font-bold">{remaining} L</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">After Reservation:</span><span className={`font-bold ${parseFloat(amount) > parseFloat(remaining) ? 'text-red-500' : 'text-[#00dc82]'}`}>{amount ? (parseFloat(remaining) - parseFloat(amount)).toFixed(2) : remaining} L</span></div>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <button type="submit" disabled={loading || !fuelType || !isVehicleVerified} className="w-full py-5 bg-gradient-to-r from-[#00b956] to-[#00e676] text-black font-bold text-lg rounded-2xl shadow-[0_0_20px_rgba(0,220,130,0.3)] hover:shadow-[0_0_30px_rgba(0,220,130,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? 'Processing...' : 'Confirm Fuel Reservation'}
-        </button>
-      </form>
+            <button type="submit" disabled={loading || !fuelType || !isVehicleVerified || !stationId} className="w-full py-5 bg-gradient-to-r from-[#00b956] to-[#00e676] text-black font-bold text-lg rounded-2xl shadow-[0_0_20px_rgba(0,220,130,0.3)] hover:shadow-[0_0_30px_rgba(0,220,130,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? 'Processing...' : 'Confirm Fuel Reservation'}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
-
 function VerificationModal({ vehicle, token, onClose, onSuccess }: any) {
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
@@ -560,7 +705,7 @@ function VerificationModal({ vehicle, token, onClose, onSuccess }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Validation
     if (!/^\d{12}$/.test(aadhaarNumber)) {
       setError('Enter a valid 12-digit Aadhaar number.');
@@ -597,7 +742,7 @@ function VerificationModal({ vehicle, token, onClose, onSuccess }: any) {
           // Let browser set Content-Type with boundary for multipart/form-data
         }
       });
-      
+
       setSuccess(true);
       setTimeout(() => onSuccess(), 2000);
     } catch (err: any) {
@@ -632,17 +777,17 @@ function VerificationModal({ vehicle, token, onClose, onSuccess }: any) {
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && <div className="p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-xl text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />{error}</div>}
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Aadhaar Number</label>
-              <input 
-                type="password" 
-                maxLength={12} 
-                required 
-                placeholder="12-digit Aadhaar number" 
-                className="w-full p-3 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none font-mono" 
-                value={aadhaarNumber} 
-                onChange={e => setAadhaarNumber(e.target.value.replace(/\D/g, ''))} 
+              <input
+                type="password"
+                maxLength={12}
+                required
+                placeholder="12-digit Aadhaar number"
+                className="w-full p-3 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none font-mono"
+                value={aadhaarNumber}
+                onChange={e => setAadhaarNumber(e.target.value.replace(/\D/g, ''))}
               />
             </div>
 
@@ -740,7 +885,7 @@ function ReservationsView({ reservations, token, onUpdate }: any) {
                   )}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 mt-6 p-4 bg-black/30 rounded-xl border border-white/5">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Vehicle</div>
@@ -760,7 +905,7 @@ function ReservationsView({ reservations, token, onUpdate }: any) {
                 </div>
               </div>
             </div>
-            
+
             {r.status === 'PENDING' && (
               <div className="w-full md:w-64 flex flex-col items-center justify-center p-6 bg-white rounded-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full bg-amber-500 text-black text-[10px] font-bold text-center py-1 uppercase tracking-widest">Reservation Active</div>
@@ -836,7 +981,7 @@ function PriorityModal({ vehicle, token, onClose, onSuccess }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!serviceType) {
       setError('Select an essential-service category.');
       return;
@@ -866,7 +1011,7 @@ function PriorityModal({ vehicle, token, onClose, onSuccess }: any) {
           Authorization: `Bearer ${token}`
         }
       });
-      
+
       setSuccess(true);
       setTimeout(() => onSuccess(), 2000);
     } catch (err: any) {
@@ -901,7 +1046,7 @@ function PriorityModal({ vehicle, token, onClose, onSuccess }: any) {
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && <div className="p-3 bg-red-900/20 border border-red-500/30 text-red-400 rounded-xl text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />{error}</div>}
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">Service Type</label>
               <select required className="w-full p-3 bg-[#020a08] border border-gray-700 rounded-xl text-white focus:border-[#00dc82] focus:outline-none" value={serviceType} onChange={e => setServiceType(e.target.value)}>

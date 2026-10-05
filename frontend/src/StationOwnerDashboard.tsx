@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
+import {
   Fuel, Settings, History, MapPin, QrCode, Scan, Camera,
   CheckCircle, AlertTriangle, AlertCircle, Clock, BarChart3, Menu, X, Database, Droplet, Activity,
   RefreshCw, Zap, Search, Filter, Phone, Navigation, Globe, Calendar, Info, User, PieChart as LucidePieChart, BarChart2, ShieldCheck, Truck
@@ -15,7 +15,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
   const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const [reservations, setReservations] = useState<any[]>([]);
   const [resLoading, setResLoading] = useState(true);
   const [resError, setResError] = useState(false);
@@ -78,10 +78,10 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
 
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
-    
+
     if (showScanner) {
       setScanMessage('');
-      
+
       const onScanSuccess = (decodedText: string) => {
         setQrToken(decodedText);
         setScanMessage('QR code scanned successfully');
@@ -91,7 +91,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
         }
         setTimeout(() => setShowScanner(false), 1000);
       };
-      
+
       const onScanFailure = () => {};
 
       // html5-qrcode has an issue where if it renders into a node that isn't ready it fails.
@@ -106,7 +106,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
         scanner.render(onScanSuccess, onScanFailure);
       }, 0);
     }
-    
+
     return () => {
       if (scanner) {
         scanner.clear().catch(console.error);
@@ -118,7 +118,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
   const today = new Date().toISOString().split('T')[0];
   const todaysReservations = reservations.filter(r => r.createdAt.startsWith(today)).length;
   const pendingVerification = reservations.filter(r => r.status === 'PENDING').length;
-  
+
   const fuelDispensedToday = reservations
     .filter(r => r.status === 'COMPLETED' && r.transaction?.createdAt?.startsWith(today))
     .reduce((sum, r) => sum + parseFloat(r.transaction.amount || 0), 0);
@@ -136,15 +136,15 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
   const primaryStation = stations.length > 0 ? stations[0] : null;
 
   const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault(); 
+    e.preventDefault();
     if (!primaryStation) return;
     setVerifyLoading(true); setVerifyMessage(null);
     try {
       const res = await axios.post(`${API_URL}/reservations/verify`, {
         qrToken, stationId: primaryStation.id, dispensedAmount: dispensed ? parseFloat(dispensed) : undefined
       }, { headers });
-      setVerifyMessage({ 
-        type: 'success', 
+      setVerifyMessage({
+        type: 'success',
         text: `Success! Dispensed ${res.data.transaction.amount} L of ${res.data.transaction.fuelType}`,
         reservation: res.data.reservation
       });
@@ -169,7 +169,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
   return (
     <div className="min-h-screen bg-[#030a18] font-sans flex text-white relative">
       {/* Global Background */}
-      <div 
+      <div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
           backgroundImage: "url('/fuel-station-login-bg.png')",
@@ -201,8 +201,8 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
               key={item.name}
               onClick={() => { setActiveTab(item.name as any); setSidebarOpen(false); }}
               className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-300 text-sm font-medium ${
-                activeTab === item.name 
-                  ? 'bg-[#328cff]/15 text-[#4AA3FF] shadow-[inset_0_0_12px_rgba(50,140,255,0.1)] border border-[#328cff]/30' 
+                activeTab === item.name
+                  ? 'bg-[#328cff]/15 text-[#4AA3FF] shadow-[inset_0_0_12px_rgba(50,140,255,0.1)] border border-[#328cff]/30'
                   : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
               }`}
             >
@@ -264,7 +264,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                   <p className="text-[#4AA3FF] font-medium text-sm mb-1">Welcome back, {user?.name || user?.email}</p>
                   <h2 className="text-2xl font-bold text-white">Station operations overview</h2>
                 </div>
-                
+
                 <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
                   {loading ? (
                     <div className="h-12 w-48 bg-white/5 animate-pulse rounded-lg"></div>
@@ -351,7 +351,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                           const qty = parseFloat(inv.quantity);
                           const cap = parseFloat(inv.capacity);
                           const pct = cap > 0 ? Math.min(100, Math.max(0, (qty / cap) * 100)) : 0;
-                          
+
                           let colorClass = 'bg-blue-500';
                           if (pct < 20) colorClass = 'bg-red-500';
                           else if (pct < 50) colorClass = 'bg-amber-500';
@@ -459,7 +459,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
 
               {/* Lower Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                
+
                 {/* Dispensing Activity */}
                 <div className="lg:col-span-2 bg-[#051329]/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                   <div className="p-6 border-b border-gray-700/50 flex justify-between items-center bg-gray-900/30">
@@ -519,7 +519,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                 <div className="bg-[#051329]/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl p-6">
                   <h3 className="text-lg font-bold text-white mb-6">Quick Actions</h3>
                   <div className="space-y-4">
-                    <button 
+                    <button
                       onClick={() => setActiveTab('QR Verification')}
                       className="w-full flex items-center p-4 bg-gray-800/40 hover:bg-[#328cff]/10 border border-gray-700/50 hover:border-[#328cff]/40 rounded-xl transition-all text-left group"
                     >
@@ -532,7 +532,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                       </div>
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => setActiveTab('Fuel Inventory')}
                       className="w-full flex items-center p-4 bg-gray-800/40 hover:bg-[#328cff]/10 border border-gray-700/50 hover:border-[#328cff]/40 rounded-xl transition-all text-left group"
                     >
@@ -544,7 +544,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                         <div className="text-xs text-gray-400">View current fuel levels</div>
                       </div>
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveTab('Dispensing History')}
                       className="w-full flex items-center p-4 bg-gray-800/40 hover:bg-[#328cff]/10 border border-gray-700/50 hover:border-[#328cff]/40 rounded-xl transition-all text-left group"
                     >
@@ -556,7 +556,7 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                         <div className="text-xs text-gray-400">View all past transactions</div>
                       </div>
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveTab('Reports')}
                       className="w-full flex items-center p-4 bg-gray-800/40 hover:bg-[#328cff]/10 border border-gray-700/50 hover:border-[#328cff]/40 rounded-xl transition-all text-left group"
                     >
@@ -609,11 +609,11 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                     )}
                   </div>
                 )}
-                
+
                 <form onSubmit={handleVerify} className="space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
                     <label className="block text-sm font-medium text-gray-300">QR Token <span className="text-red-400">*</span></label>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowScanner(true)}
                       className="mt-2 sm:mt-0 px-4 py-1.5 bg-[#328cff]/20 hover:bg-[#328cff]/40 text-[#4AA3FF] font-bold rounded-xl border border-[#328cff]/30 flex items-center transition-colors text-xs"
@@ -625,9 +625,9 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                   <div>
                     <div className="relative">
                       <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                      <input 
-                        type="text" 
-                        required 
+                      <input
+                        type="text"
+                        required
                         value={qrToken}
                         onChange={e => setQrToken(e.target.value)}
                         placeholder="Scan or enter QR token"
@@ -639,8 +639,8 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Dispensed Amount (Liters) <span className="text-gray-500 font-normal text-xs ml-1">(Optional)</span></label>
                     <div className="relative">
                       <Fuel className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         step="0.01"
                         min="0"
                         value={dispensed}
@@ -650,9 +650,9 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
                       />
                     </div>
                   </div>
-                  
-                  <button 
-                    type="submit" 
+
+                  <button
+                    type="submit"
                     disabled={verifyLoading || !primaryStation}
                     className="w-full py-4 bg-gradient-to-r from-[#1264FF] to-[#4AA3FF] hover:from-[#4AA3FF] hover:to-[#1264FF] text-white font-bold rounded-xl shadow-[0_0_20px_rgba(18,100,255,0.3)] transition-all flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -665,47 +665,48 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
           )}
 
           {activeTab === 'Fuel Inventory' && (
-            <FuelInventoryView 
-              station={primaryStation} 
-              loading={loading} 
-              isRefreshing={isRefreshing} 
-              onRefresh={handleRefresh} 
+            <FuelInventoryView
+              station={primaryStation}
+              loading={loading}
+              isRefreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              token={token}
             />
           )}
 
           {activeTab === 'Dispensing History' && (
-            <DispensingHistoryView 
-              reservations={reservations} 
-              loading={resLoading} 
+            <DispensingHistoryView
+              reservations={reservations}
+              loading={resLoading}
               error={resError}
-              isRefreshing={isRefreshing} 
-              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              onRefresh={handleRefresh}
             />
           )}
 
           {activeTab === 'Station Profile' && (
-            <StationProfileView 
-              station={primaryStation} 
+            <StationProfileView
+              station={primaryStation}
               loading={loading}
-              isRefreshing={isRefreshing} 
-              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              onRefresh={handleRefresh}
               user={user}
             />
           )}
 
           {activeTab === 'Reports' && (
-            <ReportsView 
-              station={primaryStation} 
-              reservations={reservations} 
+            <ReportsView
+              station={primaryStation}
+              reservations={reservations}
               loading={loading || resLoading}
               error={resError}
-              isRefreshing={isRefreshing} 
-              onRefresh={handleRefresh} 
+              isRefreshing={isRefreshing}
+              onRefresh={handleRefresh}
             />
           )}
 
           {activeTab === 'Supply Requests' && (
-            <SupplyRequestsView 
+            <SupplyRequestsView
               station={primaryStation}
               requests={allocationRequests}
               loading={loading || allocLoading}
@@ -809,7 +810,35 @@ export default function StationOwnerDashboard({ token, user, onLogout }: any) {
   );
 }
 
-function FuelInventoryView({ station, loading, isRefreshing, onRefresh }: any) {
+function FuelInventoryView({ station, loading, isRefreshing, onRefresh, token }: any) {
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState('');
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  const handleUpdatePrice = async (fuelType: string) => {
+    if (!priceInput || isNaN(Number(priceInput)) || Number(priceInput) < 0) {
+      setUpdateMessage({ type: 'error', text: 'Enter a valid positive price.' });
+      return;
+    }
+    setUpdateLoading(true);
+    setUpdateMessage(null);
+    try {
+      await axios.put(`${API_URL}/stations/${station.id}/inventory/${fuelType}/price`, {
+        price: Number(priceInput)
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUpdateMessage({ type: 'success', text: `Price for ${fuelType} updated successfully.` });
+      setEditingPrice(null);
+      setPriceInput('');
+      onRefresh(); // Refresh inventory data
+    } catch (err: any) {
+      setUpdateMessage({ type: 'error', text: err.response?.data?.error || 'Failed to update price' });
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
   if (loading) {
     return (
       <div className="space-y-6">
@@ -843,7 +872,7 @@ function FuelInventoryView({ station, loading, isRefreshing, onRefresh }: any) {
   }
 
   const inventory = station.inventory || [];
-  
+
   if (inventory.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-[#051329]/70 backdrop-blur-md border border-[#328cff]/30 rounded-2xl shadow-xl relative">
@@ -884,7 +913,7 @@ function FuelInventoryView({ station, loading, isRefreshing, onRefresh }: any) {
             <div className="w-2 h-2 rounded-full bg-emerald-400 mr-2 shadow-[0_0_8px_#34d399]"></div>
             <span className="text-emerald-400 text-xs font-semibold">Inventory Live</span>
           </div>
-          <button 
+          <button
             onClick={onRefresh}
             disabled={isRefreshing}
             className="flex items-center px-4 py-1.5 bg-[#328cff]/10 hover:bg-[#328cff]/20 border border-[#328cff]/30 rounded-full text-[#4AA3FF] text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -936,7 +965,7 @@ function FuelInventoryView({ station, loading, isRefreshing, onRefresh }: any) {
           const q = parseFloat(inv.quantity);
           const c = parseFloat(inv.capacity);
           const pct = c > 0 ? (q / c) * 100 : 0;
-          
+
           let statusStr = 'Healthy';
           let statusColor = 'text-emerald-400';
           if (pct === 100) { statusStr = 'Full'; statusColor = 'text-[#4AA3FF]'; }
@@ -973,10 +1002,53 @@ function FuelInventoryView({ station, loading, isRefreshing, onRefresh }: any) {
               <div className="w-full bg-gray-900/80 rounded-full h-3 overflow-hidden border border-gray-700/50 mb-4">
                 <div className={`h-full ${barColor} shadow-[0_0_8px_currentColor] transition-all duration-1000`} style={{ width: `${Math.min(100, pct)}%` }}></div>
               </div>
-              
-              <div className="text-xs text-gray-500 flex items-center">
-                <Clock className="w-3 h-3 mr-1.5" />
-                Last updated: {new Date(inv.updatedAt).toLocaleString()}
+
+              <div className="text-xs text-gray-500 flex items-center justify-between mt-4 border-t border-gray-700/50 pt-4">
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-semibold text-white">Current Price</span>
+                    {editingPrice === inv.fuelType ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          className="w-24 p-1 px-2 bg-[#020a08] border border-gray-600 rounded text-white text-sm"
+                          value={priceInput}
+                          onChange={(e) => setPriceInput(e.target.value)}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                        />
+                        <button
+                          onClick={() => handleUpdatePrice(inv.fuelType)}
+                          disabled={updateLoading}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded text-xs transition"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setEditingPrice(null); setPriceInput(''); }}
+                          className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-[#4AA3FF] font-bold">{inv.price !== null && inv.price !== undefined ? `₹${Number(inv.price).toFixed(2)}/L` : 'Not Configured'}</span>
+                        <button
+                          onClick={() => { setEditingPrice(inv.fuelType); setPriceInput(inv.price ? String(inv.price) : ''); setUpdateMessage(null); }}
+                          className="text-gray-400 hover:text-white transition"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center mt-2 text-gray-500">
+                    <Clock className="w-3 h-3 mr-1.5" />
+                    Last updated: {new Date(inv.updatedAt).toLocaleString()}
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -1041,14 +1113,14 @@ function DispensingHistoryView({ reservations, loading, error, isRefreshing, onR
       if (statusFilter === 'Cancelled' && r.status !== 'CANCELLED') return false;
     }
     if (fuelFilter !== 'All Fuel Types' && r.fuelType !== fuelFilter) return false;
-    
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const citizenMatch = r.user?.name?.toLowerCase().includes(term) || r.user?.email?.toLowerCase().includes(term);
       const vehicleMatch = r.vehicle?.licensePlate?.toLowerCase().includes(term);
       const fuelMatch = r.fuelType?.toLowerCase().includes(term);
       const idMatch = r.id.toLowerCase().includes(term);
-      
+
       if (!citizenMatch && !vehicleMatch && !fuelMatch && !idMatch) return false;
     }
     return true;
@@ -1072,7 +1144,7 @@ function DispensingHistoryView({ reservations, loading, error, isRefreshing, onR
             <div className="w-2 h-2 rounded-full bg-emerald-400 mr-2 shadow-[0_0_8px_#34d399]"></div>
             <span className="text-emerald-400 text-xs font-semibold">Transaction Records</span>
           </div>
-          <button 
+          <button
             onClick={onRefresh}
             disabled={isRefreshing}
             className="flex items-center px-4 py-1.5 bg-[#328cff]/10 hover:bg-[#328cff]/20 border border-[#328cff]/30 rounded-full text-[#4AA3FF] text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1136,23 +1208,23 @@ function DispensingHistoryView({ reservations, loading, error, isRefreshing, onR
       <div className="bg-[#051329]/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-700/50 flex flex-col lg:flex-row justify-between items-start lg:items-center bg-gray-900/30 gap-4">
           <h3 className="text-lg font-bold text-white flex items-center"><History className="w-5 h-5 mr-2 text-[#4AA3FF]"/> Transaction History</h3>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search citizen, vehicle..." 
+              <input
+                type="text"
+                placeholder="Search citizen, vehicle..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full sm:w-48 lg:w-64 pl-9 pr-4 py-2 bg-gray-900/60 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-[#4AA3FF] transition-colors"
               />
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <select 
+                <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
                   className="w-full sm:w-auto pl-9 pr-8 py-2 bg-gray-900/60 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-[#4AA3FF] transition-colors appearance-none"
@@ -1164,7 +1236,7 @@ function DispensingHistoryView({ reservations, loading, error, isRefreshing, onR
                 </select>
               </div>
 
-              <select 
+              <select
                 value={fuelFilter}
                 onChange={e => setFuelFilter(e.target.value)}
                 className="w-full sm:w-auto px-4 py-2 bg-gray-900/60 border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-[#4AA3FF] transition-colors appearance-none"
@@ -1209,7 +1281,7 @@ function DispensingHistoryView({ reservations, loading, error, isRefreshing, onR
                   const displayAmount = parseFloat(r.transaction?.amount ?? r.amount);
                   const displayStatus = r.transaction?.status ?? r.status;
                   const displayTime = r.transaction?.createdAt ?? r.createdAt;
-                  
+
                   return (
                     <tr key={r.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">
@@ -1302,7 +1374,7 @@ function StationProfileView({ station, loading, isRefreshing, onRefresh, user }:
           <p className="text-gray-400 text-sm">View your registered fuel station information and operational status.</p>
         </div>
         <div className="relative z-10 mt-4 md:mt-0 flex items-center space-x-4">
-          <button 
+          <button
             onClick={onRefresh}
             disabled={isRefreshing}
             className="flex items-center px-4 py-1.5 bg-[#328cff]/10 hover:bg-[#328cff]/20 border border-[#328cff]/30 rounded-full text-[#4AA3FF] text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1388,7 +1460,7 @@ function StationProfileView({ station, loading, isRefreshing, onRefresh, user }:
             )}
           </div>
         </div>
-        
+
         {/* INVENTORY SNAPSHOT */}
         <div className="bg-[#051329]/70 backdrop-blur-md border border-[#328cff]/20 rounded-2xl p-6 shadow-xl">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center">
@@ -1440,7 +1512,7 @@ function StationProfileView({ station, loading, isRefreshing, onRefresh, user }:
                 </div>
               </div>
             )}
-            
+
             {station.createdAt && (
               <div className="flex justify-between items-center p-3 bg-gray-900/30 rounded-xl border border-gray-800">
                 <div className="text-sm text-gray-400">Station Registered</div>
@@ -1449,7 +1521,7 @@ function StationProfileView({ station, loading, isRefreshing, onRefresh, user }:
                 </div>
               </div>
             )}
-            
+
             {station.updatedAt && (
               <div className="flex justify-between items-center p-3 bg-gray-900/30 rounded-xl border border-gray-800">
                 <div className="text-sm text-gray-400">Last Updated</div>
@@ -1514,7 +1586,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
             <p className="text-gray-400 text-sm">Operational insights from your station's fuel dispensing activity.</p>
           </div>
           <div className="relative z-10 mt-4 md:mt-0 flex items-center space-x-4">
-            <button 
+            <button
               onClick={onRefresh}
               disabled={isRefreshing}
               className="flex items-center px-4 py-1.5 bg-[#328cff]/10 hover:bg-[#328cff]/20 border border-[#328cff]/30 rounded-full text-[#4AA3FF] text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1537,12 +1609,12 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
   const now = new Date();
   const filteredReservations = reservations.filter((r: any) => {
     if (dateFilter === 'All Time') return true;
-    
+
     // For filtering by date, use the transaction.createdAt if it exists, otherwise reservation.createdAt
     const dateToCompare = (r.status === 'COMPLETED' && r.transaction) ? new Date(r.transaction.createdAt) : new Date(r.createdAt);
     const diffTime = Math.abs(now.getTime() - dateToCompare.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
     if (dateFilter === '7 Days') return diffDays <= 7;
     if (dateFilter === '30 Days') return diffDays <= 30;
     if (dateFilter === '90 Days') return diffDays <= 90;
@@ -1562,7 +1634,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
     const amount = parseFloat(r.transaction.amount || 0);
     fuelTypeMap.set(r.fuelType, (fuelTypeMap.get(r.fuelType) || 0) + amount);
   });
-  
+
   const fuelTypeData = Array.from(fuelTypeMap.entries()).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
   const COLORS = ['#328cff', '#00dc82', '#f59e0b', '#8b5cf6'];
 
@@ -1586,7 +1658,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
   // Operational Insights
   const mostDispensedFuel = fuelTypeData.length > 0 ? fuelTypeData[0].name : null;
   const avgDispensing = completedCount > 0 ? (totalDispensed / completedCount) : null;
-  
+
   // Inventory Snapshot
   const inventory = station.inventory || [];
   const totalInvQty = inventory.reduce((sum: number, item: any) => sum + parseFloat(item.quantity), 0);
@@ -1607,7 +1679,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
             <div className="w-2 h-2 rounded-full bg-emerald-400 mr-2 shadow-[0_0_8px_#34d399]"></div>
             <span className="text-emerald-400 text-xs font-semibold">Live Station Data</span>
           </div>
-          <select 
+          <select
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value)}
             className="px-3 py-1.5 bg-gray-900/60 border border-gray-700 rounded-full text-white text-xs focus:outline-none focus:border-[#4AA3FF] transition-colors appearance-none"
@@ -1617,7 +1689,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
             <option value="30 Days">Last 30 Days</option>
             <option value="7 Days">Last 7 Days</option>
           </select>
-          <button 
+          <button
             onClick={onRefresh}
             disabled={isRefreshing}
             className="flex items-center px-4 py-1.5 bg-[#328cff]/10 hover:bg-[#328cff]/20 border border-[#328cff]/30 rounded-full text-[#4AA3FF] text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1681,7 +1753,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <RechartsTooltip 
+                      <RechartsTooltip
                         formatter={(value: any) => [`${Number(value).toLocaleString()} L`, 'Dispensed']}
                         contentStyle={{ backgroundColor: '#0a152e', borderColor: '#334155', color: '#fff', borderRadius: '0.75rem' }}
                         itemStyle={{ color: '#fff' }}
@@ -1727,7 +1799,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
                 <div className="h-full bg-emerald-500 shadow-[0_0_8px_#10b981] rounded-full transition-all duration-1000" style={{ width: `${totalCount > 0 ? (completedCount/totalCount)*100 : 0}%` }}></div>
               </div>
             </div>
-            
+
             <div>
               <div className="flex justify-between items-center mb-2">
                 <div className="text-sm text-gray-300 font-medium flex items-center"><div className="w-2 h-2 rounded-full bg-amber-500 mr-2"></div>Pending</div>
@@ -1751,7 +1823,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
                 <div className="h-full bg-red-500 shadow-[0_0_8px_#ef4444] rounded-full transition-all duration-1000" style={{ width: `${totalCount > 0 ? (cancelledCount/totalCount)*100 : 0}%` }}></div>
               </div>
             </div>
-            
+
             <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-gray-700/50">
               {/* OPERATIONAL INSIGHTS */}
               <div className="bg-gray-900/40 p-4 rounded-xl border border-gray-800">
@@ -1788,7 +1860,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                   <XAxis dataKey="date" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     cursor={{ fill: '#1e293b' }}
                     contentStyle={{ backgroundColor: '#0a152e', borderColor: '#334155', color: '#fff', borderRadius: '0.75rem' }}
                     formatter={(value: any) => [`${Number(value).toLocaleString()} L`, 'Dispensed']}
@@ -1814,7 +1886,7 @@ function ReportsView({ station, reservations, loading, error, isRefreshing, onRe
           <h3 className="text-lg font-bold text-white mb-6 flex items-center">
             <Clock className="w-5 h-5 mr-2 text-[#4AA3FF]" /> Recent Activity
           </h3>
-          
+
           {recentTransactions.length > 0 ? (
             <div className="space-y-4">
               {recentTransactions.map((r: any) => (
@@ -1920,7 +1992,7 @@ function SupplyRequestsView({ station, requests, loading, isRefreshing, onRefres
           <h3 className="text-lg font-bold text-white mb-4 flex items-center">
             <Truck className="w-5 h-5 mr-2 text-[#4AA3FF]" /> Request Fuel Allocation
           </h3>
-          
+
           {message && (
             <div className={`mb-4 p-3 rounded-lg border text-sm flex items-start ${message.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
               {message.type === 'success' ? <CheckCircle className="w-4 h-4 mr-2 mt-0.5 shrink-0" /> : <AlertCircle className="w-4 h-4 mr-2 mt-0.5 shrink-0" />}
@@ -1931,7 +2003,7 @@ function SupplyRequestsView({ station, requests, loading, isRefreshing, onRefres
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Fuel Type</label>
-              <select 
+              <select
                 value={fuelType} onChange={e => setFuelType(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white text-sm focus:border-[#4AA3FF] outline-none"
               >
@@ -1940,10 +2012,10 @@ function SupplyRequestsView({ station, requests, loading, isRefreshing, onRefres
                 )) || <option value="PETROL">PETROL</option>}
               </select>
             </div>
-            
+
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Requested Quantity (Liters)</label>
-              <input 
+              <input
                 type="number" min="1" step="0.01" required
                 value={requestedQuantity} onChange={e => setRequestedQuantity(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white text-sm focus:border-[#4AA3FF] outline-none"
@@ -1952,13 +2024,13 @@ function SupplyRequestsView({ station, requests, loading, isRefreshing, onRefres
 
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Reason (Optional)</label>
-              <textarea 
+              <textarea
                 rows={2} value={reason} onChange={e => setReason(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-lg text-white text-sm focus:border-[#4AA3FF] outline-none resize-none"
               ></textarea>
             </div>
 
-            <button 
+            <button
               type="submit" disabled={submitting}
               className="w-full py-2.5 bg-[#328cff] hover:bg-[#2563eb] text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm"
             >
@@ -1969,7 +2041,7 @@ function SupplyRequestsView({ station, requests, loading, isRefreshing, onRefres
 
         {/* Inventory & Requests */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Real Inventory Status */}
           <div className="bg-[#051329]/70 backdrop-blur-md border border-[#328cff]/20 rounded-2xl p-6 shadow-xl">
              <h3 className="text-lg font-bold text-white mb-4 flex items-center">

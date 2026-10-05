@@ -57,6 +57,9 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
       if (inventory.quantity.toNumber() < amount) {
         throw new Error('Station has insufficient stock for this reservation');
       }
+      if (inventory.price === null) {
+        throw new Error('Fuel price is not configured for this station');
+      }
 
       // --- PHASE 4E: DYNAMIC FUEL QUOTA ENFORCEMENT ENGINE ---
       const capacity = inventory.capacity.toNumber();
@@ -354,7 +357,7 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
           stationId,
           fuelType: reservation.fuelType,
           amount: new Prisma.Decimal(finalAmount),
-          price: new Prisma.Decimal(0), // Would pull price dynamically in real app
+          price: inventory.price,
           status: 'SUCCESS',
           reservationId: reservation.id,
           vehicleIdSnapshot: reservation.vehicleId,

@@ -198,6 +198,7 @@ model FuelInventory {
   fuelType  FuelType
   quantity  Decimal  @db.Decimal(10, 2)
   capacity  Decimal  @db.Decimal(10, 2)
+  price     Decimal? @db.Decimal(10, 2)
   updatedAt DateTime @updatedAt
   
   @@unique([stationId, fuelType])

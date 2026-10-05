@@ -17,7 +17,7 @@ export const registerStation = async (req: Request, res: Response): Promise<void
   try {
     const userId = (req as any).user.id;
     const role = (req as any).user.role;
-    
+
     if (role !== 'STATION_OWNER' && role !== 'ADMIN') {
       res.status(403).json({ error: 'Forbidden' });
       return;
@@ -55,9 +55,18 @@ export const listStations = async (req: Request, res: Response): Promise<void> =
     const role = (req as any).user.role;
 
     let stations;
-    if (role === 'ADMIN' || role === 'USER') {
-      // Regular users and admins can see all stations (users need it to book)
+    if (role === 'ADMIN') {
       stations = await prisma.station.findMany({ include: { owner: { select: { name: true, email: true } }, inventory: true } });
+    } else if (role === 'USER') {
+      stations = await prisma.station.findMany({
+        where: { isActive: true },
+        include: { inventory: true }
+      });
+      // Strip owner for user
+      stations = stations.map(s => {
+        const { ownerId, ...safeStation } = s as any;
+        return safeStation;
+      });
     } else if (role === 'STATION_OWNER') {
       // Owners only see their own stations
       stations = await prisma.station.findMany({ where: { ownerId: userId }, include: { inventory: true } });
@@ -66,17 +75,37 @@ export const listStations = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Append percentageRemaining to inventory array
+    // Append percentageRemaining and availability status to inventory array
     const stationsWithCalc = stations.map(station => ({
       ...station,
       inventory: station.inventory.map(inv => {
         const quantityNum = inv.quantity.toNumber();
         const capacityNum = inv.capacity.toNumber();
         const percentageRemaining = capacityNum > 0 ? (quantityNum / capacityNum) * 100 : 0;
+
+        let status = 'AVAILABLE';
+        if (quantityNum <= 0) status = 'OUT_OF_STOCK';
+        else if (percentageRemaining <= 20) status = 'LOW';
+
+        if (inv.price === null) status = 'PRICE_NOT_CONFIGURED';
+
+        // For user, strip out quantity and capacity if we want to be strict,
+        // but prompt says "The frontend must NOT depend on exact inventory quantity".
+        // It says "For USER/Citizen responses: Expose only what is necessary..."
+        // Let's explicitly return only the safe inventory fields for USER.
+        if (role === 'USER') {
+           return {
+             id: inv.id,
+             fuelType: inv.fuelType,
+             status,
+             price: inv.price ? inv.price.toNumber() : null
+           };
+        }
+
         return {
           ...inv,
           percentageRemaining,
-          isLowStock: undefined // TODO Phase 4C/4D: Define low stock threshold
+          status
         };
       })
     }));
@@ -139,7 +168,7 @@ export const updateInventory = async (req: Request, res: Response): Promise<void
     const id = req.params.id as string;
     const userId = (req as any).user.id;
     const role = (req as any).user.role;
-    
+
     const parsed = updateInventorySchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Validation failed' });
@@ -232,7 +261,7 @@ export const createAllocationRequest = async (req: Request, res: Response): Prom
   try {
     const userId = (req as any).user.id;
     const role = (req as any).user.role;
-    
+
     if (role !== 'STATION_OWNER') {
       res.status(403).json({ error: 'Only Station Owners can request allocation' });
       return;
@@ -278,7 +307,7 @@ export const getStationAllocationRequests = async (req: Request, res: Response):
   try {
     const userId = (req as any).user.id;
     const role = (req as any).user.role;
-    
+
     if (role !== 'STATION_OWNER') {
       res.status(403).json({ error: 'Forbidden' });
       return;
@@ -292,6 +321,51 @@ export const getStationAllocationRequests = async (req: Request, res: Response):
     });
 
     res.json(requests);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const updatePrice = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id, fuelType } = req.params as { id: string; fuelType: string };
+    const userId = (req as any).user.id;
+    const role = (req as any).user.role;
+
+    const { price } = req.body;
+
+    if (price === undefined || typeof price !== 'number' || price < 0 || !isFinite(price)) {
+      res.status(400).json({ error: 'Valid positive price is required' });
+      return;
+    }
+
+    const station = await prisma.station.findUnique({ where: { id } });
+    if (!station) {
+      res.status(404).json({ error: 'Station not found' });
+      return;
+    }
+
+    if (role === 'STATION_OWNER' && station.ownerId !== userId) {
+      res.status(403).json({ error: 'Unauthorized to update this station' });
+      return;
+    }
+
+    const inventory = await prisma.fuelInventory.findUnique({
+      where: { stationId_fuelType: { stationId: id, fuelType: fuelType as any } }
+    });
+
+    if (!inventory) {
+      res.status(404).json({ error: 'Fuel type not found for this station' });
+      return;
+    }
+
+    const updated = await prisma.fuelInventory.update({
+      where: { id: inventory.id },
+      data: { price: new Prisma.Decimal(price) }
+    });
+
+    res.json(updated);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
