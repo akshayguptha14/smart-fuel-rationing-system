@@ -1108,3 +1108,244 @@ export const getForecasting = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+export const getAllocationIntelligence = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const role = (req as any).user.role;
+    if (role !== 'ADMIN') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const windowDays = 7;
+    const windowMs = windowDays * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - windowMs);
+
+    const stationsData = await prisma.station.findMany({
+      include: { inventory: true }
+    });
+
+    const ledgerEvents = await prisma.inventoryLedger.findMany({
+      where: {
+        createdAt: { gte: windowStart }
+      }
+    });
+
+    const allocationRequests = await prisma.fuelAllocationRequest.findMany({
+      where: { status: 'PENDING' }
+    });
+
+    const priorityReservations = await prisma.reservation.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        vehicle: {
+          include: {
+            priority: true
+          }
+        }
+      }
+    });
+
+    const summary = {
+      totalStations: 0,
+      urgent: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      dataInsufficient: 0,
+      critical: 0,
+      pendingAllocationRequests: 0
+    };
+
+    const stationsResult = [];
+
+    for (const station of stationsData) {
+      for (const inv of station.inventory) {
+        summary.totalStations++;
+
+        const capacity = inv.capacity.toNumber();
+        const currentInventory = inv.quantity.toNumber();
+        const inventoryPercentage = capacity > 0 ? (currentInventory / capacity) * 100 : 0;
+
+        let currentRisk = "NORMAL";
+        let riskPoints = 0;
+        if (inventoryPercentage < 20) {
+          currentRisk = "CRITICAL";
+          riskPoints = 60;
+          summary.critical++;
+        } else if (inventoryPercentage <= 50) {
+          currentRisk = "LOW";
+          riskPoints = 30;
+        }
+
+        const relevantEvents = ledgerEvents.filter(e => e.stationId === station.id && e.fuelType === inv.fuelType);
+        
+        const activeDaysSet = new Set(relevantEvents.map(e => e.createdAt.toISOString().split('T')[0]));
+        const activeDays = activeDaysSet.size;
+        const consumptionEventsCount = relevantEvents.filter(e => ['RESERVED', 'DISPENSED', 'REFUNDED'].includes(e.eventType)).length;
+
+        const reservedMovement = relevantEvents.filter(e => e.eventType === 'RESERVED').reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const dispensedMovement = relevantEvents.filter(e => e.eventType === 'DISPENSED').reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const refundedMovement = relevantEvents.filter(e => e.eventType === 'REFUNDED').reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+        const netConsumedLiters = reservedMovement + dispensedMovement - refundedMovement;
+
+        const suppliedLiters = relevantEvents.filter(e => e.eventType === 'SUPPLIED').reduce((acc, val) => acc + Math.abs(val.quantityChange.toNumber()), 0);
+
+        let forecastStatus = "INSUFFICIENT_DATA";
+        let forecastMessage = "Insufficient historical data";
+        let netBurnRateLitersPerDay = null;
+        let hoursUntilShortage = null;
+        let etaPoints = 0;
+
+        if (activeDays >= 3 && consumptionEventsCount >= 5) {
+          if (netConsumedLiters <= 0) {
+            forecastStatus = "NO_CONSUMPTION";
+            forecastMessage = "No recent consumption detected";
+          } else {
+            forecastStatus = "READY";
+            forecastMessage = "Forecast available";
+            netBurnRateLitersPerDay = netConsumedLiters / windowDays;
+            hoursUntilShortage = currentInventory <= 0 ? 0 : (currentInventory / netBurnRateLitersPerDay) * 24;
+
+            if (hoursUntilShortage <= 6) {
+              etaPoints = 30;
+            } else if (hoursUntilShortage <= 24) {
+              etaPoints = 20;
+            } else if (hoursUntilShortage <= 72) {
+              etaPoints = 10;
+            } else {
+              etaPoints = 0;
+            }
+          }
+        }
+
+        const relevantRequests = allocationRequests.filter(r => r.stationId === station.id && r.fuelType === inv.fuelType);
+        const pendingRequestCount = relevantRequests.length;
+        const pendingRequestedLiters = relevantRequests.reduce((acc, r) => acc + r.requestedQuantity.toNumber(), 0);
+        
+        if (pendingRequestCount > 0) summary.pendingAllocationRequests += pendingRequestCount;
+
+        const pendingRequestPoints = pendingRequestCount > 0 ? 10 : 0;
+
+        const relevantPriorityRes = priorityReservations.filter(r => 
+          r.stationId === station.id && 
+          r.fuelType === inv.fuelType && 
+          r.vehicle?.priority && 
+          ['AMBULANCE', 'FARMER', 'PUBLIC_TRANSPORT'].includes(r.vehicle.priority.serviceType)
+        );
+        const priorityReservationCount = relevantPriorityRes.length;
+        const priorityDemandLiters = relevantPriorityRes.reduce((acc, r) => acc + r.amount.toNumber(), 0);
+
+        let urgencyScore = riskPoints + etaPoints + pendingRequestPoints;
+        if (urgencyScore > 100) urgencyScore = 100;
+
+        let urgencyClassification = "LOW";
+        if (forecastStatus === "INSUFFICIENT_DATA") {
+          urgencyClassification = "DATA_INSUFFICIENT";
+          summary.dataInsufficient++;
+        } else if (forecastStatus === "NO_CONSUMPTION") {
+          // If no consumption but still has risk/pending requests, it can still classify based on risk points.
+          if (urgencyScore >= 80) urgencyClassification = "URGENT";
+          else if (urgencyScore >= 50) urgencyClassification = "HIGH";
+          else if (urgencyScore >= 25) urgencyClassification = "MEDIUM";
+          else urgencyClassification = "LOW";
+          
+          if (urgencyClassification === "URGENT") summary.urgent++;
+          else if (urgencyClassification === "HIGH") summary.high++;
+          else if (urgencyClassification === "MEDIUM") summary.medium++;
+          else summary.low++;
+        } else {
+          if (urgencyScore >= 80) urgencyClassification = "URGENT";
+          else if (urgencyScore >= 50) urgencyClassification = "HIGH";
+          else if (urgencyScore >= 25) urgencyClassification = "MEDIUM";
+          else urgencyClassification = "LOW";
+          
+          if (urgencyClassification === "URGENT") summary.urgent++;
+          else if (urgencyClassification === "HIGH") summary.high++;
+          else if (urgencyClassification === "MEDIUM") summary.medium++;
+          else summary.low++;
+        }
+
+        const targetInventory = capacity * 0.80;
+        let recommendedAllocationLiters = null;
+        if (capacity > 0) {
+          if (currentRisk === "NORMAL") {
+            recommendedAllocationLiters = 0;
+          } else {
+            recommendedAllocationLiters = Math.max(0, targetInventory - currentInventory);
+          }
+        }
+
+        let recommendationReason = "";
+        if (currentRisk === "CRITICAL" && forecastStatus === "READY") {
+          recommendationReason = "Urgent replenishment recommended due to critical stock and projected shortage.";
+        } else if (currentRisk === "LOW" && forecastStatus === "READY") {
+          recommendationReason = "Plan replenishment based on current stock and projected demand.";
+        } else if (currentRisk === "NORMAL") {
+          recommendationReason = "No immediate replenishment required.";
+        } else if (forecastStatus === "INSUFFICIENT_DATA") {
+          recommendationReason = "Insufficient historical data — continue collecting inventory history.";
+        } else if (forecastStatus === "NO_CONSUMPTION") {
+          recommendationReason = "No recent consumption detected — forecast unavailable.";
+        } else {
+          recommendationReason = "Replenishment recommended based on current stock.";
+        }
+
+        if (pendingRequestCount > 0) {
+          recommendationReason += ` Pending request: ${pendingRequestedLiters.toLocaleString()} L.`;
+        }
+
+        stationsResult.push({
+          stationId: station.id,
+          stationName: station.name,
+          location: station.location,
+          fuelType: inv.fuelType,
+          currentInventory,
+          capacity,
+          inventoryPercentage,
+          currentRisk,
+          forecastStatus,
+          forecastMessage,
+          activeDays,
+          consumptionEvents: consumptionEventsCount,
+          netConsumedLiters,
+          netBurnRateLitersPerDay,
+          hoursUntilShortage,
+          suppliedLiters,
+          pendingRequestCount,
+          pendingRequestedLiters,
+          priorityReservationCount,
+          priorityDemandLiters,
+          urgencyScore,
+          urgencyClassification,
+          recommendedAllocationLiters,
+          recommendationReason
+        });
+      }
+    }
+
+    stationsResult.sort((a, b) => {
+      if (b.urgencyScore !== a.urgencyScore) return b.urgencyScore - a.urgencyScore;
+      const riskOrder: any = { "CRITICAL": 3, "LOW": 2, "NORMAL": 1 };
+      if (riskOrder[b.currentRisk] !== riskOrder[a.currentRisk]) return riskOrder[b.currentRisk] - riskOrder[a.currentRisk];
+      if (a.stationName !== b.stationName) return a.stationName.localeCompare(b.stationName);
+      return a.fuelType.localeCompare(b.fuelType);
+    });
+
+    res.json({
+      generatedAt: now.toISOString(),
+      analysisWindow: {
+        start: windowStart.toISOString(),
+        end: now.toISOString(),
+        days: windowDays
+      },
+      summary,
+      stations: stationsResult
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
