@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
-import { Prisma, FuelType } from '@prisma/client';
+import { Prisma, FuelType, FuelInventory } from '@prisma/client';
 
 import { z } from 'zod';
 
@@ -78,7 +78,7 @@ export const listStations = async (req: Request, res: Response): Promise<void> =
     // Append percentageRemaining and availability status to inventory array
     const stationsWithCalc = stations.map(station => ({
       ...station,
-      inventory: station.inventory.map(inv => {
+      inventory: station.inventory.map((inv: FuelInventory) => {
         const quantityNum = inv.quantity.toNumber();
         const capacityNum = inv.capacity.toNumber();
         const percentageRemaining = capacityNum > 0 ? (quantityNum / capacityNum) * 100 : 0;

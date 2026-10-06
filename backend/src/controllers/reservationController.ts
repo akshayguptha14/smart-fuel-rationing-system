@@ -307,6 +307,17 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
         throw new Error('Cannot dispense more than reserved amount');
       }
 
+      // Fetch inventory to get the current price for the transaction snapshot
+      const inventory = await tx.fuelInventory.findUnique({
+        where: { stationId_fuelType: { stationId: reservation.stationId, fuelType: reservation.fuelType } }
+      });
+      if (!inventory) {
+        throw new Error('Fuel inventory not found');
+      }
+      if (inventory.price === null) {
+        throw new Error('Fuel price is not configured for this station');
+      }
+
       // Handle partial dispensing (refund the difference to quota and inventory)
       const diff = reservation.amount.toNumber() - finalAmount;
       if (diff > 0) {
@@ -320,15 +331,11 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
           });
         }
 
-        const inventory = await tx.fuelInventory.findUnique({
-          where: { stationId_fuelType: { stationId: reservation.stationId, fuelType: reservation.fuelType } }
+        await tx.fuelInventory.update({
+          where: { id: inventory.id },
+          data: { quantity: { increment: diff } }
         });
-        if (inventory) {
-          await tx.fuelInventory.update({
-            where: { id: inventory.id },
-            data: { quantity: { increment: diff } }
-          });
-          const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
+        const currentInv = await tx.fuelInventory.findUnique({ where: { id: inventory.id } });
           if (currentInv) {
             await tx.inventoryLedger.create({
               data: {
@@ -342,7 +349,6 @@ export const verifyReservation = async (req: Request, res: Response): Promise<vo
             });
           }
         }
-      }
 
       let currentFleetId = null;
       if (reservation.vehicleId) {
