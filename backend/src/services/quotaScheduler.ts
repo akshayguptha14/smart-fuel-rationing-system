@@ -1,16 +1,17 @@
 import { prisma } from '../utils/prisma';
+import { calculateDynamicQuotaFactors } from '../utils/dynamicQuotaHelper';
 
 export const runQuotaReset = async () => {
   try {
     const now = new Date();
-    
+
     // Find all expired active quotas
     const expiredQuotas = await prisma.fuelQuota.findMany({
       where: {
         isActive: true,
         endDate: { lte: now }
       },
-      include: { vehicle: true }
+      include: { vehicle: { include: { priority: true } } }
     });
 
     if (expiredQuotas.length === 0) return;
@@ -25,7 +26,7 @@ export const runQuotaReset = async () => {
           where: { id: quota.id, isActive: true },
           data: { isActive: false }
         });
-        
+
         // If it was already updated by a concurrent process, bail out
         if (updated.count === 0) return;
 
@@ -44,12 +45,25 @@ export const runQuotaReset = async () => {
           endDate.setMonth(startDate.getMonth() + 1);
         }
 
+        const isPriority = quota.vehicle.priority && quota.vehicle.priority.status === 'APPROVED';
+        let factors = await calculateDynamicQuotaFactors(tx, quota.vehicleId, defaultQuota, period);
+        if (isPriority) factors.usageMultiplier = 1.0;
+
+        let effectiveQuota = factors.effectiveQuota;
+        if (isPriority) {
+          effectiveQuota = defaultQuota * factors.locationMultiplier;
+        }
+
         // Create new active quota
         await tx.fuelQuota.create({
           data: {
             vehicleId: quota.vehicleId,
-            totalQuota: defaultQuota,
-            remainingQuota: defaultQuota,
+            baseQuota: defaultQuota,
+            usageMultiplier: factors.usageMultiplier,
+            locationMultiplier: factors.locationMultiplier,
+            referenceLocation: factors.referenceLocation,
+            totalQuota: effectiveQuota,
+            remainingQuota: effectiveQuota,
             period,
             startDate,
             endDate,
@@ -69,7 +83,7 @@ export const startQuotaScheduler = () => {
   console.log('[QuotaScheduler] Starting background job...');
   // Run immediately on boot to catch up
   runQuotaReset();
-  
+
   // Then run every hour
   setInterval(runQuotaReset, 60 * 60 * 1000);
 };

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
+import { calculateDynamicQuotaFactors } from '../utils/dynamicQuotaHelper';
 import fs from 'fs';
 import path from 'path';
 
@@ -317,7 +318,7 @@ export const approveVerification = async (req: Request, res: Response): Promise<
           reviewedAt: new Date(),
           rejectionReason: null
         },
-        include: { vehicle: true }
+        include: { vehicle: { include: { priority: true } } }
       });
 
       // Check if active quota exists
@@ -343,11 +344,24 @@ export const approveVerification = async (req: Request, res: Response): Promise<
           endDate.setMonth(now.getMonth() + 1);
         }
 
+        const isPriority = verif.vehicle.priority && verif.vehicle.priority.status === 'APPROVED';
+        let factors = await calculateDynamicQuotaFactors(tx, verif.vehicleId, policy.defaultQuota.toNumber(), policy.period);
+        if (isPriority) factors.usageMultiplier = 1.0;
+
+        let effectiveQuota = factors.effectiveQuota;
+        if (isPriority) {
+          effectiveQuota = policy.defaultQuota.toNumber() * factors.locationMultiplier;
+        }
+
         await tx.fuelQuota.create({
           data: {
             vehicleId: verif.vehicleId,
-            totalQuota: policy.defaultQuota,
-            remainingQuota: policy.defaultQuota,
+            baseQuota: policy.defaultQuota,
+            usageMultiplier: factors.usageMultiplier,
+            locationMultiplier: factors.locationMultiplier,
+            referenceLocation: factors.referenceLocation,
+            totalQuota: effectiveQuota,
+            remainingQuota: effectiveQuota,
             period: policy.period,
             startDate: now,
             endDate: endDate,

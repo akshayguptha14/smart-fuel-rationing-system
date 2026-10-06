@@ -157,8 +157,13 @@ model FuelQuota {
   vehicleId      String
   vehicle        Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   period         QuotaPeriod @default(WEEKLY)
+  baseQuota      Decimal     @db.Decimal(10, 2) @default(0)
+  usageMultiplier    Decimal @db.Decimal(4, 2) @default(1.0)
+  locationMultiplier Decimal @db.Decimal(4, 2) @default(1.0)
+  referenceLocation  String?
   totalQuota     Decimal     @db.Decimal(10, 2)
   remainingQuota Decimal     @db.Decimal(10, 2)
+
   startDate      DateTime
   endDate        DateTime
   isActive       Boolean     @default(true) // To distinguish current from history
