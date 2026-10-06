@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   Fuel, Settings, History, MapPin, QrCode, Scan, Camera,
   CheckCircle, AlertTriangle, AlertCircle, Clock, BarChart3, Menu, X, Database, Droplet, Activity,
-  RefreshCw, Zap, Search, Filter, Phone, Navigation, Globe, Calendar, Info, User, PieChart as LucidePieChart, BarChart2, ShieldCheck, Truck
+  RefreshCw, Zap, Search, Filter, Phone, Navigation, Globe, Calendar, Info, User, PieChart as LucidePieChart, BarChart2, ShieldCheck, Truck, Edit2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -814,7 +814,7 @@ function FuelInventoryView({ station, loading, isRefreshing, onRefresh, token }:
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState('');
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [_updateMessage, setUpdateMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   const handleUpdatePrice = async (fuelType: string) => {
     if (!priceInput || isNaN(Number(priceInput)) || Number(priceInput) < 0) {

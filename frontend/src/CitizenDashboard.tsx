@@ -479,7 +479,7 @@ function BookFuelView({ vehicles, stations, token, onBooked }: any) {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
-        err => console.log('Location not available')
+        _err => console.log('Location not available')
       );
     }
   }, []);
@@ -633,7 +633,7 @@ function BookFuelView({ vehicles, stations, token, onBooked }: any) {
               )}
             </div>
 
-            <div className={\g-[#041812]/70 backdrop-blur-md border \ rounded-2xl p-6 transition-all\}>
+            <div className={`bg-[#041812]/70 backdrop-blur-md border rounded-2xl p-6 transition-all`}>
               <h3 className="text-[#00dc82] font-semibold text-sm mb-4 tracking-wider uppercase">Step 2: Fuel Type</h3>
               {!stationId ? (
                 <div className="text-sm text-gray-400 text-center py-4">Please select a station from the map first.</div>
@@ -647,12 +647,12 @@ function BookFuelView({ vehicles, stations, token, onBooked }: any) {
                       type="button"
                       onClick={() => setFuelType(ft.fuelType)}
                       disabled={ft.status === 'OUT_OF_STOCK' || ft.status === 'PRICE_NOT_CONFIGURED'}
-                      className={p-4 rounded-xl border flex flex-col items-center justify-center transition-all  }
+                      className={`p-4 rounded-xl border flex flex-col items-center justify-center transition-all ${fuelType === ft.fuelType ? "border-[#00dc82] bg-[#00dc82]/10" : "border-gray-800 bg-[#020a08] hover:border-[#00dc82]/50"}`}
                     >
-                      <Droplet className={w-6 h-6 mb-2 } />
+                      <Droplet className={`w-6 h-6 mb-2 ${fuelType === ft.fuelType ? "text-[#00dc82]" : "text-gray-500"}`} />
                       <span className="text-sm font-semibold">{ft.fuelType}</span>
-                      <span className="text-xs mt-1 font-bold">{ft.price ? ₹/L : 'No Price'}</span>
-                      <span className={	ext-[10px] mt-1 }>
+                      <span className="text-xs mt-1 font-bold">{ft.price ? `₹${ft.price}/L` : "No Price"}</span>
+                      <span className={`text-[10px] mt-1 ${ft.status === "AVAILABLE" ? "text-[#00dc82]" : "text-red-400"}`}>
                         {ft.status.replace(/_/g, ' ')}
                       </span>
                     </button>
@@ -673,7 +673,7 @@ function BookFuelView({ vehicles, stations, token, onBooked }: any) {
                 {vehicle && (
                   <div className="w-full p-4 bg-gray-900/50 rounded-xl border border-gray-800 text-sm">
                     <div className="flex justify-between mb-1"><span className="text-gray-400">Remaining Quota:</span><span className="text-white font-bold">{remaining} L</span></div>
-                    <div className="flex justify-between mb-1"><span className="text-gray-400">After Reservation:</span><span className={\ont-bold \}>{amount ? (parseFloat(remaining) - parseFloat(amount)).toFixed(2) : remaining} L</span></div>
+                    <div className="flex justify-between mb-1"><span className="text-gray-400">After Reservation:</span><span className={`font-bold ${amount && parseFloat(amount) > parseFloat(remaining) ? "text-red-400" : "text-white"}`}>{amount ? (parseFloat(remaining) - parseFloat(amount)).toFixed(2) : remaining} L</span></div>
                     {selectedFuel && selectedFuel.price && amount && (
                       <div className="flex justify-between mt-2 pt-2 border-t border-gray-800">
                         <span className="text-gray-400">Estimated Total:</span>
