@@ -16,3 +16,12 @@ export const strictLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
   skip: () => process.env.NODE_ENV === 'test'
 });
+
+export const reservationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reservation requests, please try again later.' },
+  skip: () => process.env.NODE_ENV === 'test'
+});
